@@ -485,6 +485,7 @@ class TableOrder(Document):
         else:
             invoice = self.get_invoice({entry["identifier"]: entry})
             item = invoice.items[0]
+
             data = dict(
                 item_code=item.item_code,
                 qty=item.qty,
@@ -519,11 +520,10 @@ class TableOrder(Document):
                 self.append('entry_items', data)
                 return "aggregate"
             else:
-                values = ','.join('='.join((f"`{key}`", """{value}""".format(value=frappe.db.escape(val)))) for (key, val) in data.items())
+                values = ','.join('='.join((f"`{key}`", """{value}""".format(value=(f"'{val}'" if val is not None else "") if key == "item_tax_template" else frappe.db.escape(val)))) for (key, val) in data.items())
                 base_sql = f"UPDATE `tabOrder Entry Item` set {values}"
-
-                sql="""{base_sql} WHERE `identifier`='{identifier}'""".format(base_sql = base_sql, identifier=entry["identifier"])
-                frappe.db.sql(sql)
+ 
+                frappe.db.sql("""{base_sql} WHERE `identifier`='{identifier}'""".format(base_sql = base_sql, identifier=entry["identifier"]))
                 
                 return "db_commit"
 
@@ -532,7 +532,7 @@ class TableOrder(Document):
         invoice = self.get_invoice(entry_items)
 
         self.entry_items = []
-        for item in invoice.items:
+        for item in invoice.items:            
             if item.from_customize == 1:
                 continue
             entry_item = entry_items[item.identifier] if item.identifier in entry_items else None

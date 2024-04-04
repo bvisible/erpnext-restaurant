@@ -39,8 +39,9 @@
   "restricted_to_branches",
   "restricted_branches",
   "customer",
-  "group_items_by_order"
-
+  "group_items_by_order",
+  "file",
+  "image"
  ],
  "fields": [
   {
@@ -209,7 +210,7 @@
    "label": "Restricted Branches",
    "options": "Production Center Branch"
   },
-    {
+  {
    "fieldname": "customer",
    "fieldtype": "Link",
    "label": "Customer",
@@ -220,11 +221,21 @@
    "fieldname": "group_items_by_order",
    "fieldtype": "Check",
    "label": "Group Items By Order"
+  },
+  {
+   "fieldname": "file",
+   "fieldtype": "Attach",
+   "label": "File"
+  },
+  {
+   "fieldname": "image",
+   "fieldtype": "Attach Image",
+   "label": "Image"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-01-19 17:13:51.904417",
+ "modified": "2023-05-30 18:24:39.536478",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Object",

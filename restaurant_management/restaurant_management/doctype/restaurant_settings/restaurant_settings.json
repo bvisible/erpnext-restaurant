@@ -27,7 +27,8 @@
   "to_change_status_order",
   "section_break_11",
   "restaurant_permissions_info",
-  "restaurant_exceptions"
+  "restaurant_exceptions",
+  "test_field"
  ],
  "fields": [
   {
@@ -145,12 +146,18 @@
   {
    "fieldname": "column_break_9",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "test_field",
+   "fieldtype": "Link",
+   "label": "Test",
+   "options": "Test Library"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-07-13 21:07:25.854704",
+ "modified": "2023-09-11 16:23:21.799513",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Settings",
