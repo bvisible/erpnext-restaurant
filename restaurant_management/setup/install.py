@@ -117,6 +117,14 @@ def clear_custom_fields():
 def set_default_process_status():
     status = [
         dict(
+            action="Draft", icon="fa fa-pencil", color="grey",
+            message="Draft", action_message="Submit", allows_to_edit_item="1"
+        ),
+        dict(
+            action="Opened", icon="fa fa-open", color="grey",
+            message="Opened", action_message="Take", allows_to_edit_item="1"
+        ),
+        dict(
             action="Pending",icon="fa fa-cart-arrow-down", color="red",
             message="Pending", action_message="Add", allows_to_edit_item="1"
         ),

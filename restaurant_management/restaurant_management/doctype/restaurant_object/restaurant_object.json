@@ -233,12 +233,12 @@
    "label": "Image"
   }
  ],
- "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-05-30 18:24:39.536478",
+ "modified": "2024-04-04 13:34:32.122444",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Object",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -279,10 +279,10 @@
   }
  ],
  "quick_entry": 1,
- "restrict_to_domain": "Services",
  "search_fields": "room_description,type,description",
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "description",
  "track_changes": 1
 }

@@ -646,7 +646,8 @@ RestaurantManage = class RestaurantManage {
   }
 
   get room_from_url() {
-    return frappe.urllib.get_arg("restaurant_room");
+    return localStorage.getItem("restaurant_room") || this.current_room?.data?.name || null;
+    ///return frappe.urllib.get_arg("restaurant_room");
   }
 
   unselect_all_tables() {
@@ -673,7 +674,8 @@ RestaurantManage = class RestaurantManage {
 
   delete_current_room() {
     this.current_room = null;
-    frappe.set_route(`/restaurant-manage?restaurant_room=?`);
+    localStorage.removeItem("restaurant_room");
+    //frappe.set_route(`/restaurant-manage?restaurant_room=?`);
     this.test_components();
   }
 

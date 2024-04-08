@@ -18,9 +18,7 @@ ___
 
 ___
 ### ERPNext Restaurant Management requires
-1. [Frappe Framework](https://github.com/quantumbitcore/frappe_helper.git)
 1. [ERPNext](https://github.com/frappe/erpnext.git)
-1. [Frappe Helper](https://github.com/quantumbitcore/frappe_helper.git)<br>
     Frappe Helper is another experimental application created by us, in order to be reused by other applications.
 
 ___

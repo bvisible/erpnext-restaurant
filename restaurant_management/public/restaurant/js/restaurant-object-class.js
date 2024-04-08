@@ -292,7 +292,7 @@ RestaurantObject = class RestaurantObject {
     this.has_customer = frappe.jshtml({
       tag: "span",
       properties: {
-        class: `has-customer ${(this.data.customer || this.data.status === "Reserved") ? "" : "hide"}`,
+        class: `has-customer ${(this.hasCustomer() || this.data.status === "Reserved") ? "" : "hide"}`,
         style: `background-color: ${block_style}`
       },
       content: `<span class="fa fa-user has-customer-icon"></span>`// style="float:right; font-size: 20px; /*margin-right:6px; margin-top:3px*/"></span>`,
@@ -400,7 +400,7 @@ RestaurantObject = class RestaurantObject {
             return;
           }
 
-          if (this.data.customer.length > 0) {
+          if (this.hasCustomer()) {
             _open();
             return
           }
@@ -416,7 +416,7 @@ RestaurantObject = class RestaurantObject {
                   fieldtype: 'Link', label: __('Customer'),
                   fieldname: "customer",
                   options: "Customer",
-                  default: this.data.customer,
+                  default: this.data?.customer,
                   //get_query: () => {
                   //    return {
                   //        filters: {
@@ -611,6 +611,10 @@ RestaurantObject = class RestaurantObject {
     }
   }
 
+  hasCustomer(){
+    return this.data?.customer?.length > 0;
+  }
+
   reset_data(data) {
     this.data = data;
     this.obj.prop("style", this.style_structure);
@@ -620,7 +624,7 @@ RestaurantObject = class RestaurantObject {
     )
     this.description.val(this.data.description);
     this.no_of_seats.val(this.data.no_of_seats);
-    if (this.data.customer || this.data.status === "Reserved") {
+    if (this.hasCustomer() || this.data.status === "Reserved") {
       this.has_customer.remove_class("hide");
     } else {
       this.has_customer.add_class("hide");

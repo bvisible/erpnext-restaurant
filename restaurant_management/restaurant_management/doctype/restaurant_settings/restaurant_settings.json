@@ -27,8 +27,7 @@
   "to_change_status_order",
   "section_break_11",
   "restaurant_permissions_info",
-  "restaurant_exceptions",
-  "test_field"
+  "restaurant_exceptions"
  ],
  "fields": [
   {
@@ -146,12 +145,6 @@
   {
    "fieldname": "column_break_9",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "test_field",
-   "fieldtype": "Link",
-   "label": "Test",
-   "options": "Test Library"
   }
  ],
  "index_web_pages_for_search": 1,

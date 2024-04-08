@@ -105,10 +105,11 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-02-06 20:14:14.664594",
+ "modified": "2024-04-04 13:41:38.671856",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Booking",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
@@ -125,9 +126,9 @@
   }
  ],
  "quick_entry": 1,
- "restrict_to_domain": "Hospitality",
  "search_fields": "customer,customer_name,contact_number,table_description",
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

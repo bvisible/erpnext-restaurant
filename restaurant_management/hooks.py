@@ -11,7 +11,7 @@ app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "qubitcore.io@gmail.com"
 app_license = "MIT"
-source_link = "https://github.com/joepa37/restaurant_management"
+source_link = "https://github.com/alphabit-technology/erpnext-restaurant"
 
 doc_events = {
     "POS Profile": {
@@ -25,9 +25,9 @@ doc_events = {
 }
 
 app_include_css = [
-	"/assets/helper/css/desk-form.css",
-  "/assets/helper/css/frappe-helper.css",
-  "/assets/helper/css/num-pad.css",
+	"/assets/restaurant_management/helper/css/desk-form.css",
+  "/assets/restaurant_management/helper/css/custom.css",
+  "/assets/restaurant_management/helper/css/num-pad.css",
 ]
 
 after_migrate = "restaurant_management.setup.install.after_install"

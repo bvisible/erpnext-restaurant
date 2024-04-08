@@ -242,7 +242,8 @@ class RestaurantRoom extends ObjectManage {
 
   get_tables() {
     RM.working("Loading Objects");
-    frappe.set_route(`/restaurant-manage?restaurant_room=${this.data.name}`);
+    localStorage.setItem("restaurant_room", this.data.name);
+    //frappe.set_route(`/restaurant-manage?restaurant_room=${this.data.name}`);
     frappeHelper.api.call({
       model: "Restaurant Object",
       name: this.data.name,
