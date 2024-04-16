@@ -11,7 +11,7 @@ setup(
 	name='restaurant_management',
 	version=version,
 	description='Restaurant',
-	author='Quantum Bit Core',
+	author='AlphaBit Technology',
 	author_email='qubitcore.io@gmail.com',
 	packages=find_packages(),
 	zip_safe=False,

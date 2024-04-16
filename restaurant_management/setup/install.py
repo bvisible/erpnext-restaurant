@@ -52,7 +52,7 @@ custom_fields = {
         section_break_27=dict(fieldtype="Section Break", insert_after="customizable_options", collapsible=1),
         item_type=dict(label="Item Type", fieldtype="Select", options="Veg\nNon-Veg\nVeg/Non-Veg", insert_after="section_break_27"),
         column_break_29=dict(fieldtype="Column Break", insert_after="item_type"),
-        cuisine=dict(label="Cuisine", fieldtype="Select", options="Indian\nChinese\nContinental\nItalian\nTandoor\nGoan\nDesert", insert_after="column_break_29"),
+        cuisine=dict(label="Cuisine", fieldtype="Link", options="Cuisine Type", insert_after="column_break_29"),
     ),
     #"Delivery Charges": dict(
     #    shipping_rule=dict(label="Shipping Rule", fieldtype="Link",
@@ -61,13 +61,14 @@ custom_fields = {
 }
 
 fields_not_needed = ['parent', 'parenttype', 'restaurant_permissions', 'restaurant_settings', 'crm_room', 'column_break_1', 'crm_table']
+fields_has_changed = ['cuisine']
 
 def after_install():
     create_desk_forms()
     clear_custom_fields()
     set_custom_fields()
     set_custom_scripts()
-    set_default_process_status()
+    set_default_data()
 
 def insert_desk_form(form_data):
     desk_form = frappe.new_doc("Desk Form")
@@ -106,13 +107,19 @@ def create_desk_forms():
 def clear_custom_fields():
     for doc in custom_fields:
         for field_name in custom_fields[doc]:
-            if (field_name in fields_not_needed):
+            if (field_name in fields_not_needed or field_name in fields_has_changed):
                 test_field = frappe.get_value(
                     "Custom Field", doc + "-" + field_name)
 
                 if test_field is not None:
                     frappe.db.sql("""DELETE FROM `tabCustom Field` WHERE name=%s""", test_field)
 
+def set_default_data():
+    frappe.db.sql("""UPDATE `tabWorkspace` SET public=1 WHERE name = 'Restaurant Management'""")
+    frappe.db.sql("""UPDATE `tabWorkspace` SET title='Restaurant Management' WHERE name = 'Restaurant Management'""")
+    
+    set_default_process_status()
+    set_cuisine_types()
 
 def set_default_process_status():
     status = [
@@ -156,6 +163,26 @@ def set_default_process_status():
             action="Invoiced", icon="fa fa-money", color="green",
             message="Invoiced", action_message="Invoiced", allows_to_edit_item="0"
         ),
+        dict(
+            action="Cancelled", icon="fa fa-close", color="red",
+            message="Cancelled", action_message="Cancelled", allows_to_edit_item="0"
+        ),
+        dict(
+            action="Closed", icon="fa fa-close", color="red",
+            message="Closed", action_message="Closed", allows_to_edit_item="0"
+        ),
+        dict(
+            action="Rejected", icon="fa fa-close", color="red",
+            message="Rejected", action_message="Rejected", allows_to_edit_item="0"
+        ),
+        dict(
+            action="Returned", icon="fa fa-close", color="red",
+            message="Returned", action_message="Returned", allows_to_edit_item="0"
+        ),
+        dict(
+            action="Refunded", icon="fa fa-close", color="red",
+            message="Refunded", action_message="Refunded", allows_to_edit_item="0"
+        )
     ]
 
     for status in status:
@@ -169,7 +196,30 @@ def set_default_process_status():
         for key in status:
             PS.set(key, status[key])
 
+        print("    Creating Process Status: {}".format(status["action"]))
         PS.save() if exist else PS.insert()
+    print("*"*50)
+
+def set_cuisine_types():
+    cuisine_types = ["American", "Asian", "Barbecue", "Chinese", "Continental", "French", "Indian", "Italian", "Japanese", "Mediterranean", "Mexican", "Middle Eastern", "Thai", "Vietnamese"]
+
+    for cuisine in cuisine_types:
+        exist = frappe.db.count("Cuisine Type", filters=dict(name=cuisine)) > 0
+
+        if exist:
+            print("    Updating Cuisine Type: {}".format(cuisine))
+            CT = frappe.get_doc("Cuisine Type", cuisine)
+        else:
+            print("    Creating Cuisine Type: {}".format(cuisine))
+            CT = frappe.new_doc("Cuisine Type")
+
+        for key in cuisine:
+            CT.set("description", cuisine)
+
+        
+        CT.save() if exist else CT.insert()
+    
+    print("*"*50)
 
 def set_custom_fields():
     for doc in custom_fields:

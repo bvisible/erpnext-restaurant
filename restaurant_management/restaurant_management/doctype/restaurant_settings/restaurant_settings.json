@@ -1,6 +1,7 @@
 {
  "actions": [],
  "creation": "2020-06-07 20:39:44.010918",
+ "description": "Restaurant Management Module",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -150,7 +151,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-09-11 16:23:21.799513",
+ "modified": "2024-04-16 13:30:57.154283",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Settings",
@@ -165,10 +166,21 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Restaurant Manager",
+   "share": 1,
+   "write": 1
   }
  ],
  "quick_entry": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

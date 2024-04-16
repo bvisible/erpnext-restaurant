@@ -28,7 +28,6 @@
   "charge_amount",
   "pick_time",
   "branch",
-  "column_break_11",
   "items",
   "entry_items",
   "invoice_info_section",
@@ -189,15 +188,11 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "column_break_11",
-   "fieldtype": "Section Break"
-  },
-  {
    "fetch_from": "address.posa_delivery_charges",
    "fieldname": "delivery_charges",
    "fieldtype": "Link",
    "label": "Delivery Charges",
-   "options": "Delivery Charges",
+   "options": "RM Delivery Charges",
    "read_only": 1
   },
   {
@@ -286,10 +281,11 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-03-21 20:15:03.770762",
+ "modified": "2024-04-15 18:11:35.668706",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Table Order",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -333,5 +329,6 @@
  "quick_entry": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }
