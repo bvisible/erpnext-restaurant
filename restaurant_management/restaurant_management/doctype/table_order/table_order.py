@@ -456,6 +456,8 @@ class TableOrder(Document):
         frappe.db.delete('Order Entry Item', {'identifier': item})
         self.db_commit()
 
+        frappe.msgprint('Debug error: {0}').format(self.table),
+
         frappe.msgprint(_('Item {0} has been removed').format(item),
                         indicator='red', alert=True)
 
