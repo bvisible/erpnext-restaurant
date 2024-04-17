@@ -220,16 +220,10 @@ def accept(desk_form, data, doc_name=None):
 
 
 def has_desk_form_permission(doctype, name, ptype='read'):
-	if frappe.session.user=="Guest":
-		return False
+  if frappe.session.user=="Guest":
+    return False
 
-	# owner matches
-	elif frappe.db.get_value(doctype, name, "owner")==frappe.session.user:
-		return True
-
-	else:
-		return False
-
+  return True
 
 @frappe.whitelist(allow_guest=False)
 def get_desk_form_filters(desk_form_name):
