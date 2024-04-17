@@ -87,6 +87,7 @@ class TableOrder(Document):
 
     @property
     def _table(self):
+        frappe.msgprint(self.table)
         return frappe.get_doc("Restaurant Object", self.table)
 
     def divide_template(self):
