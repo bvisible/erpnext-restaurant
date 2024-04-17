@@ -87,7 +87,6 @@ class TableOrder(Document):
 
     @property
     def _table(self):
-        frappe.msgprint(self.table)
         return frappe.get_doc("Restaurant Object", self.table)
 
     def divide_template(self):
@@ -456,6 +455,9 @@ class TableOrder(Document):
             "Order Entry Item", {'identifier': item}, "status")
         frappe.db.delete('Order Entry Item', {'identifier': item})
         self.db_commit()
+
+        frappe.msgprint(_('Item {0} has been removed').format(item),
+                        indicator='red', alert=True)
 
         if synchronize and frappe.db.count("Order Entry Item", {"identifier": item}) == 0:
             #self.synchronize_data = dict(action='queue', item_removed=item, status=[status])
