@@ -125,7 +125,7 @@ class ItemsTree {
       const action = frappe.jshtml({
         tag: "li",
         properties: {
-          class: "tree-node",
+          class: "tree-node bg-transparent",
           style: `padding:5px; border-radius:20px; color:var(--dark); border: 1px solid var(--gray-dark); margin: 5px; background-color: var(--light); ${item.name === "All Item Groups" ? "display: none;" : ";"}`
         },
         content: `
@@ -143,7 +143,7 @@ class ItemsTree {
       });
 
       wrapper.append(`
-        <li class="tree-node">
+        <li class="tree-node bg-transparent">
           ${action.html()}
           <ul class="tree-children" area-children="${item.name}" style="display:none;"></ul>
           <div class="col md-12" area-items="${item.name}" style="display:none; padding:5px;">

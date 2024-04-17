@@ -333,7 +333,9 @@ class ProductItem {
 
     function template() {
       return `
-        <div class="small-box item item-code" item-code="${item_code}" is-customizable=${is_customizable} style="border-radius: 5px 25px 25px;">
+        <div 
+          class="small-box item item-code" 
+          item-code="${item_code}" is-customizable=${is_customizable} style="border-radius: 5px 25px 25px; width: 100%;">
             <div class="inner" style="position: inherit; z-index: 100">
                 <h4 class="title">
                     <i class="fa fa-circle" style="color: var(--${veg ? 'success' : 'danger'})"></i>
@@ -341,7 +343,7 @@ class ProductItem {
                 </h4>
                 <p> ${description}</p>
             </div>
-            <div class="icon" style="background-color: var(--dt-text-light); border-radius: 20px;">
+            <div class="icon bg-transparent" style="border-radius: 20px;">
                 ${item_image ? `<img src="${item_image}" alt="${item_title}"></img>` :
       `<span class="no-image placeholder-text" style="font-size: 40px; color:var(--gray);"> ${frappe.get_abbr(item_title)}</span>`}
             </div>
