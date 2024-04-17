@@ -59,7 +59,7 @@ class RestaurantSettings(Document):
             tax_template=frappe.get_doc(
                 "Sales Taxes and Charges Template", tax_template) if tax_template else {},
             crm_settings=self.get_crm_settings(),
-            allows_to_edit_item=frappe.get_list(
+            allows_to_edit_item=frappe.get_all(
                 "Status Order PC", "name", filters=dict(allows_to_edit_item=1)),
         )
 
@@ -111,13 +111,13 @@ class RestaurantSettings(Document):
             if more_filters is not None:
                 permissions_filter.update(more_filters)
 
-            restaurant_permissions = frappe.db.get_list("Restaurant Permission",
+            restaurant_permissions = frappe.db.get_all("Restaurant Permission",
                                                         "object_name",
                                                         filters=permissions_filter
                                                         ) if permission_parent else []
 
             if type == 'Room':
-                restaurant_permissions = frappe.get_list("Restaurant Object",
+                restaurant_permissions = frappe.get_all("Restaurant Object",
                                                          ("room", "name", "type"),
                                                          filters=dict(
                                                              name=(
