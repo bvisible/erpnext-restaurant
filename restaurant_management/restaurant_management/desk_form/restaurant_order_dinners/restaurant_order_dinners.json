@@ -12,7 +12,6 @@
    "allow_read_on_all_link_options": 1,
    "collapsible": 0,
    "default": "",
-   "depends_on": "",
    "description": "",
    "extra_field": 0,
    "fetch_if_empty": 0,
@@ -34,7 +33,7 @@
  "is_standard": 1,
  "login_required": 1,
  "max_attachment_size": 0,
- "modified": "2024-04-16 13:35:14.052005",
+ "modified": "2024-04-16 15:47:45.585743",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "restaurant-order-dinners",
@@ -42,7 +41,7 @@
  "published": 1,
  "route": "restaurant-order-dinners",
  "route_to_success_link": 0,
- "show_attachments": 0,
+ "show_attachments": 1,
  "show_in_grid": 0,
  "title": "Restaurant Order Dinners"
 }

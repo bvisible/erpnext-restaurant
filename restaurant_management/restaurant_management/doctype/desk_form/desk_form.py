@@ -103,6 +103,34 @@ class DeskForm(Document):
 
 			# TODO translate options of Select fields like Country
 
+	# export
+	def on_update(self):
+		"""
+			Writes the .txt for this page and if write_content is checked,
+			it will write out a .html file
+		"""
+		path = export_module_json(self, self.is_standard, self.module)
+
+		if path:
+			# js
+			if not os.path.exists(path + '.js'):
+				with open(path + '.js', 'w') as f:
+					f.write("""frappe.ready(function() {
+	// bind events here
+})""")
+
+			# py
+			if not os.path.exists(path + '.py'):
+				with open(path + '.py', 'w') as f:
+					f.write("""from __future__ import unicode_literals
+
+import frappe
+
+def get_context(context):
+	# do your desk here
+	pass
+""")
+
 	def get_parents(self, context):
 		parents = None
 
