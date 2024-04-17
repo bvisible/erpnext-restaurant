@@ -41,7 +41,7 @@ class DeskForm(Document):
 
 		## Save our changes to JSON file
 		jsonFile = open(file_path, "w+")
-		jsonFile.write(json.dumps(tmp))
+		jsonFile.write(json.dumps(tmp), indent=2) # write the buffer to the file
 		jsonFile.close()
 
 	def after_delete(self):
@@ -227,21 +227,9 @@ def has_desk_form_permission(doctype, name, ptype='read'):
 	elif frappe.db.get_value(doctype, name, "owner")==frappe.session.user:
 		return True
 
-	elif frappe.has_website_permission(name, ptype=ptype, doctype=doctype):
-		return True
-
-	elif check_webform_perm(doctype, name):
-		return True
-
 	else:
 		return False
 
-
-def check_webform_perm(doctype, name):
-	doc = frappe.get_doc(doctype, name)
-	if hasattr(doc, "has_webform_permission"):
-		if doc.has_webform_permission():
-			return True
 
 @frappe.whitelist(allow_guest=False)
 def get_desk_form_filters(desk_form_name):
