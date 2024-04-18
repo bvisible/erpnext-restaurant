@@ -11,9 +11,9 @@ class RestaurantManage:
             "status_managed": ("in", status)
         })
 
-        for item in object_in_status:
-            obj = frappe.get_doc("Restaurant Object", item.parent)
-            obj.synchronize()
+        #for item in object_in_status:
+        #    obj = frappe.get_doc("Restaurant Object", item.parent)
+        #    obj.synchronize()
 
     @staticmethod
     def common_role(a, b):
