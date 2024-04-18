@@ -456,11 +456,6 @@ class TableOrder(Document):
         frappe.db.delete('Order Entry Item', {'identifier': item})
         self.db_commit()
 
-        frappe.msgprint('Debug error: {0}').format(self.table),
-
-        frappe.msgprint(_('Item {0} has been removed').format(item),
-                        indicator='red', alert=True)
-
         if synchronize and frappe.db.count("Order Entry Item", {"identifier": item}) == 0:
             #self.synchronize_data = dict(action='queue', item_removed=item, status=[status])
             self.synchronize(
@@ -652,7 +647,7 @@ class TableOrder(Document):
         short_name = self.short_name
 
         for item in self.entry_items:
-            if item.qty > 0 and (from_item is None or from_item == item.identifier):
+            if item.qty is not None and item.qty > 0 and (from_item is None or from_item == item.identifier):
                 _item = item.as_dict()
 
                 row = {col: _item[col] for col in [
