@@ -134,7 +134,7 @@ class ProductItem {
 
     const customization_items = () => {
       return new Promise(res => {
-        frappe.db.get_list("Item Customizable", {
+        frappe.db.get_all("Item Customizable", {
           fields: ["item", "rate", "qty", "included"],
           filters: { parent: item_code }
         }).then(customization_items => {
