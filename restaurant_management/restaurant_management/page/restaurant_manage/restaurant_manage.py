@@ -7,7 +7,7 @@ from erpnext.accounts.doctype.pos_invoice.pos_invoice import get_stock_availabil
 class RestaurantManage:
     @staticmethod
     def production_center_notify(status):
-        object_in_status = frappe.get_all("Status Managed Production Center", parent_doctype="Restaurant Object", filters={
+        object_in_status = frappe.get_all("Status Managed Production Center", filters={
             "status_managed": ("in", status)
         })
 
