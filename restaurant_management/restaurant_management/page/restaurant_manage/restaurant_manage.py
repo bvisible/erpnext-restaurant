@@ -7,7 +7,7 @@ from erpnext.accounts.doctype.pos_invoice.pos_invoice import get_stock_availabil
 class RestaurantManage:
     @staticmethod
     def production_center_notify(status):
-        object_in_status = frappe.get_all("Status Managed Production Center", filters={
+        object_in_status = frappe.db.get_all("Status Managed Production Center", filters={
             "status_managed": ("in", status)
         })
 
@@ -110,7 +110,7 @@ class RestaurantManage:
                     "parent": ("!=", "")
                 }
 
-                data = dict(Process=frappe.get_all(
+                data = dict(Process=frappe.db.get_all(
                     "Order Entry Item", "identifier,status", filters=filters))
 
         return data
@@ -132,7 +132,7 @@ def add_room(client=None):
 
 @frappe.whitelist(allow_guest=True)
 def get_work_station():
-    work_stations = frappe.get_all("Work Station")
+    work_stations = frappe.db.get_all("Work Station")
     work_station = frappe.get_doc("Work Station", work_stations[0].name)
     return {
         "work_station": work_station,
@@ -287,7 +287,7 @@ def get_items(start, page_length, price_list, item_group, pos_profile, item_type
 
     if items_data:
         items = [d.item_code for d in items_data]
-        item_prices_data = frappe.get_all("Item Price",
+        item_prices_data = frappe.db.get_all("Item Price",
                                           fields=[
                                               "item_code", "price_list_rate", "currency"],
                                           filters={'price_list': price_list, 'item_code': ['in', items]})
