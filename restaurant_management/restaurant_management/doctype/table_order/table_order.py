@@ -420,11 +420,12 @@ class TableOrder(Document):
             frappe.throw(_("Please set a Customer"))
 
         from restaurant_management.restaurant_management.restaurant_manage import check_exceptions
-        check_exceptions(
+        """check_exceptions(
             dict(name="Table Order", short_name="order",
                  action="write", data=self),
             "You cannot modify an order from another User"
         )
+        """
 
         if self.status == "Opened":
             self.status = "Attending"
