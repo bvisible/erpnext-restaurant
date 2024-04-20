@@ -615,8 +615,6 @@ RestaurantManage = class RestaurantManage {
       r.in_menu ? (!items.includes(r.item) && items.push(r.item)) : (items = items.filter(i => i !== r.item)); 
 
       this.menu.items = items;
-
-      this.menu_manage && this.menu_manage.reload();
     });
   }
 
