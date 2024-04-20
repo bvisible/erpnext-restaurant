@@ -85,9 +85,12 @@ class ItemsTree {
       const item_group = $(this).attr('data-group');
 
       const filter = item_group === "All Item Groups" ? { name: item_group } : { 
-        parent_item_group: item_group,
-        item_group_name: ["in", RM.menu.items_groups]
+        parent_item_group: item_group
       };
+
+      if(this.in_menu) {
+        filter.item_group_name = ["in", RM.menu.items_groups];
+      }
 
       frappe.db.get_list("Item Group", { fields: ["*"], filters: filter }).then(groups => {
         self.render_tree(groups, self.wrapper.find('.tree'), true);
