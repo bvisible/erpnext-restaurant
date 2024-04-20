@@ -2,12 +2,13 @@ class MenuManage extends ObjectManage {
   #items = {};
   menu_items = {};
   title = "Menu Management";
+  identifier = "menu-manage";
 
   constructor(options) {
     super(options);
 
     this.modal = null;
-    this.item_container_name = `items-container-${this.table_name}`;
+    this.item_container_name = `items-container-${this.identifier}`;
     this.items_in_menu = RM.menu.items;
     this.init_synchronize();
     this.initialize();
@@ -85,8 +86,6 @@ class MenuManage extends ObjectManage {
   }
 
   template() {
-    const self = this;
-
     this.items_wrapper = frappe.jshtml({
       tag: 'div',
       properties: {
@@ -114,68 +113,12 @@ class MenuManage extends ObjectManage {
 
     const template = $(`
     <style>
-      .item-action .tab-label {
-        display: unset;
-      }
-
-      .order-manage.mob .tab {
-        flex-direction: column;
-        height: 100%;
-        display: none !important;
-        position: relative;
-      }
-
-      .order-manage.mob.sm .item-action .tab-label {
-        display: none !important;
-      }
-
-      .order-manage.desk .tab {
-        flex-direction: column;
-        height: 100%;
-        position: relative;
-      }
-
-      .order-manage.mob .tab.active {
-        display: block !important;
-      }
-
-      .order-manage .table {
-        margin: 0;
-      }
-
-      .order-manage.desk .tab.items {
-        width: 100%;
-        position: absolute;
-        border-left: var(--default-line);
-        border-right: var(--default-line);
-      }
-
-      .order-manage.desk .footer-container {
-        display: none;
-      }
-
-      .order-manage.desk .tab.orders {
-        position: absolute;
-        width: 90px;
-        padding: 5px;
-      }
-
       .item-type-wrapper {
         padding: 2px;
         /*background: var(--dark);*/
       }
-
-      .item-type:hover {
-        background: var(--dark);
-        color: var(--light);
-      }
-
-      .item-type:focus {
-        border: none !important;
-        box-shadow: none !important;
-      }
     </style>
-		<div class="order-manage desk" id="${this.identifier}">
+		<div class="desk" id="${this.identifier}">
       <div class="content-container" style="height:calc(100% - 40px);">
           <div class="tab items">
               ${this.item_type_wrapper.html()}

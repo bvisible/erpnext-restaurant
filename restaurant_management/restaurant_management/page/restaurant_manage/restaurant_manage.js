@@ -230,11 +230,11 @@ RestaurantManage = class RestaurantManage {
       properties: { class: "btn btn-default btn-flat" },
       content: `<span class="fa fa-bars"></span> ${__("Menu")}`
     }).on("click", () => {
-      if(this.menu_manage){
-        this.menu_manage.show();
-      }else{
-        this.menu_manage = new MenuManage().show();
+      if(!this.menu_manage){
+        this.menu_manage = new MenuManage();
       }
+
+      this.menu_manage.show();
     });
 
     this.general_edit_button = frappe.jshtml({
