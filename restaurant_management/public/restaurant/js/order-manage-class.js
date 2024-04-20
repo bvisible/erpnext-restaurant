@@ -935,6 +935,7 @@ class OrderManage extends ObjectManage {
     this.#items = new ItemsTree({
       wrapper: $(`#${this.item_container_name}`),
       order_manage: this,
+      in_menu: true,
     });
   }
 

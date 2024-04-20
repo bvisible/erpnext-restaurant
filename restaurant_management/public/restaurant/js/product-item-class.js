@@ -4,6 +4,7 @@ class ProductItem {
   currency = RM.pos_profile.currency;
   search_term = '';
   item_type = '';
+
   constructor(opts) {
     Object.assign(this, opts);
 
@@ -55,18 +56,25 @@ class ProductItem {
       frappe.call({
         method: RM.url_manage + 'get_items',
         freeze: true,
-        args: { start, page_length, price_list, item_group, item_type, search_value, pos_profile, force_parent }
+        args: { start, page_length, price_list, item_group, item_type, search_value, pos_profile, force_parent, in_menu: this.item_tree.in_menu }
       }).then(r => {
         res(r.message);
       });
     });
   }
 
-  render_items(items) {
+  render_items(items=this.items) {
     const self = this;
-    const raw_items = Object.values(items || this.items)
+    items = Object.values(items);
+
+    if (this.item_tree.in_menu) {
+      items = items.filter(item => RM.menu.items.includes(item.item_code));
+    }
+
+    const raw_items =items
       //.filter(item => {console.log(item); return item.item_group === this.parent_item_group})
       .map(item => this.get_item_html(item));
+
     raw_items.reduce((acc, item) => acc += item, '');
 
     this.clusterize.update(raw_items);
@@ -317,6 +325,8 @@ class ProductItem {
   }
 
   get_item_html(item) {
+    if (this.order_manage?.item_template) return this.order_manage.item_template(item);
+
     const price_list_rate = format_currency(item.price_list_rate, this.currency);
     const { item_code, item_name, item_image, description, is_customizable } = item;
     const item_title = item_name || item_code;
@@ -336,7 +346,7 @@ class ProductItem {
       return `
         <div 
           class="small-box item item-code" 
-          item-code="${item_code}" is-customizable=${is_customizable} style="border-radius: 5px 25px 25px; width: 100%;">
+          item-code="${item_code}" is-customizable=${is_customizable} style="border-radius: 5px 20px 25px; width: 100%;">
             <div class="inner" style="position: inherit; z-index: 100">
                 <h4 class="title">
                     <i class="fa fa-circle" style="color: var(--${veg ? 'success' : 'danger'})"></i>
@@ -345,7 +355,7 @@ class ProductItem {
                 <p> ${description}</p>
             </div>
             <div class="icon bg-transparent" style="border-radius: 20px;">
-                ${item_image ? `<img src="${item_image}" alt="${item_title}"></img>` :
+                ${item_image ? `<img src="${item_image}" alt="${item_title}" loading="lazy" decoding="async"></img>` :
       `<span class="no-image placeholder-text" style="font-size: 40px; color:var(--gray);"> ${frappe.get_abbr(item_title)}</span>`}
             </div>
             <div class="small-box-footer" style="padding:3px; background-color: transparent;">
@@ -367,7 +377,7 @@ class ProductItem {
                         </div>
                     </div>
                 </div>
-                <a class="btn btn-danger add-item" data-action="add" style="float:right; border-radius:50px;">
+                <a class="btn btn-success add-item" data-action="add" style="float:right; border-radius:50px;">
                     <span class="sr-only">${__('Add')}</span>
                     ${__('Add')} ${price_list_rate}
                 </a>

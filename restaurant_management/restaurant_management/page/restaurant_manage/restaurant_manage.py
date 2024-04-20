@@ -210,7 +210,7 @@ def group_items_count():
     return items
 
 @frappe.whitelist()
-def get_items(start, page_length, price_list, item_group, pos_profile, item_type=None, search_value="", force_parent=0):
+def get_items(start, page_length, price_list, item_group, pos_profile, item_type=None, search_value="", force_parent=0, in_menu=0):
     data = dict()
     result = []
 
@@ -218,15 +218,13 @@ def get_items(start, page_length, price_list, item_group, pos_profile, item_type
         'Stock Settings', 'allow_negative_stock')
     warehouse, hide_unavailable_items = frappe.db.get_value('POS Profile', pos_profile,
                                                             ['warehouse', 'hide_unavailable_items'])
-
     if not frappe.db.exists('Item Group', item_group):
         item_group = get_root_of('Item Group')
 
     if search_value:
         data = search_serial_or_batch_or_barcode_number(search_value)
 
-    item_code = data.get("item_code") if data.get(
-        "item_code") else search_value
+    item_code = data.get("item_code") if data.get("item_code") else search_value
     serial_no = data.get("serial_no") if data.get("serial_no") else ""
     batch_no = data.get("batch_no") if data.get("batch_no") else ""
     barcode = data.get("barcode") if data.get("barcode") else ""
@@ -363,3 +361,36 @@ def get_item_group_condition(pos_profile):
 		cond = "and item.item_group in (%s)" % (', '.join(['%s']*len(item_groups)))
 
 	return cond % tuple(item_groups)
+
+@frappe.whitelist()
+def set_item_in_menu(item_code, in_menu):
+  pos_data = pos_profile_data()
+
+  if not pos_data.get("has_pos"):
+    frappe.throw("POS Profile is not set for this user")
+    return
+  
+  pos = pos_data.get("pos")
+  
+  if not pos.restaurant_menu:
+    frappe.db.set_value("POS Profile", pos.name, "restaurant_menu", frappe.new_doc("Restaurant Menu").insert().name)
+    pos.reload()
+
+  menu = frappe.get_doc("Restaurant Menu", pos.restaurant_menu)
+
+  if in_menu == "true":
+    if not any(item.get("item") == item_code for item in menu.menu_items):
+      menu.append("menu_items", {
+        "item": item_code
+      })
+  else:
+    if any(item.get("item") == item_code for item in menu.menu_items):
+      for item in menu.menu_items:
+        if item.item == item_code:
+          menu.menu_items.remove(item)
+          break
+
+  menu.save()
+  frappe.publish_realtime("update_menu", {"item_code": item_code, "in_menu": in_menu})
+
+  return {"message": "Item added to menu successfully" if in_menu else "Item removed from menu successfully"}

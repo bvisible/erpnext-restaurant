@@ -5,17 +5,24 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_klae"
+  "column_break_newa",
+  "menu_items"
  ],
  "fields": [
   {
-   "fieldname": "section_break_klae",
-   "fieldtype": "Section Break"
+   "fieldname": "menu_items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "Restaurant Menu Item"
+  },
+  {
+   "fieldname": "column_break_newa",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-04-16 18:11:40.222484",
+ "modified": "2024-04-19 16:58:42.785150",
  "modified_by": "Administrator",
  "module": "Restaurant Management",
  "name": "Restaurant Menu",

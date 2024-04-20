@@ -76,6 +76,7 @@ RestaurantManage = class RestaurantManage {
       'js/reservation-manage.js',
 
       'js/order-manage-class.js',
+      'js/menu-manage-class.js',
       'js/product-item-class.js',
       'js/items-tree-class.js',
       'js/order-item-class.js',
@@ -224,6 +225,18 @@ RestaurantManage = class RestaurantManage {
       if (this.current_room != null) this.current_room.delete();
     }, DOUBLE_CLICK);
 
+    this.#components.menu_manage = frappe.jshtml({
+      tag: "button",
+      properties: { class: "btn btn-default btn-flat" },
+      content: `<span class="fa fa-bars"></span> ${__("Menu")}`
+    }).on("click", () => {
+      if(this.menu_manage){
+        this.menu_manage.show();
+      }else{
+        this.menu_manage = new MenuManage().show();
+      }
+    });
+
     this.general_edit_button = frappe.jshtml({
       tag: "div",
       properties: {
@@ -303,6 +316,7 @@ RestaurantManage = class RestaurantManage {
 					<div class="floor-map-editor right">
 						${this.components.edit_room.html()}
 						${this.components.delete_room.html()}
+            ${this.components.menu_manage.html()}
 					</div>
 					${this.floor_map.html()}
 				</div>
@@ -352,6 +366,17 @@ RestaurantManage = class RestaurantManage {
 
         $("body").show();
         res();
+      });
+    });
+  }
+
+  call(method, args) {
+    method = this.url_manage + method;
+    this.working("Processing");
+    return new Promise(res => {
+      frappe.call({method, args}).then(r => {
+        r.message && this.ready(r.message);
+        res(r.message);
       });
     });
   }
@@ -444,6 +469,13 @@ RestaurantManage = class RestaurantManage {
     this.crm_settings = {};
     this.allows_to_edit_item = r.allows_to_edit_item.map(t => t.name);
     this.has_pending_status = this.allows_to_edit_item.includes("Pending");
+    this.menu = {
+      name: r.menu,
+      items: r.menu_items.map(i => i.item),
+      items_groups: r.items_groups,
+      //categories: r.menu_categories,
+      //menus: r.menus
+    }
 
     if (!this.has_pending_status) {
       $("body").show();
@@ -576,6 +608,15 @@ RestaurantManage = class RestaurantManage {
         this.#pos_profile = null;
         this.raise_exception_for_pos_profile();
       }
+    });
+
+    frappe.realtime.on("update_menu", (r) => {
+      const items = this.menu.items
+      r.in_menu ? (!items.includes(r.item) && items.push(r.item)) : (items = items.filter(i => i !== r.item)); 
+
+      this.menu.items = items;
+
+      this.menu_manage && this.menu_manage.reload();
     });
   }
 

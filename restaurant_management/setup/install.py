@@ -27,7 +27,8 @@ custom_fields = {
         ),
         crm_room=dict(label="CRM Room", fieldtype="Link", options="Restaurant Object", insert_after="restaurant_settings"),
         column_break_1=dict(fieldtype="Column Break", insert_after="crm_room"), 
-        crm_table=dict(label="CRM Table", fieldtype="Link", read_only=1, options="Restaurant Object", insert_after="column_break_1")
+        crm_table=dict(label="CRM Table", fieldtype="Link", read_only=1, options="Restaurant Object", insert_after="column_break_1"),
+        restaurant_menu=dict(label="Restaurant Menu", fieldtype="Link", options="Restaurant Menu", insert_after="company"),
     ),
     "POS Invoice Item": dict(
         identifier=dict(label="Identifier", fieldtype="Data"),

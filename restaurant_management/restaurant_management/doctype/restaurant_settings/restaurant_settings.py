@@ -34,14 +34,35 @@ class RestaurantSettings(Document):
         return (False)
 
     def settings_data(self):
+        company = self.company()
         profile = frappe.db.get_value(
             "User", frappe.session.user, "role_profile_name")
         #restaurant_settings = frappe.get_single("Restaurant Settings")
         tax_template = frappe.db.get_value("Sales Taxes and Charges Template", {
-                                           "company": self.company()})
+                                           "company": company})
+        pos = self.pos_profile_data()
+
+        if pos.get("has_pos"):
+          menu = frappe.db.get_value("Restaurant Menu", pos.get("pos").restaurant_menu, "name")
+          menu_items = frappe.get_all("Restaurant Menu Item", filters=dict(
+              parent=menu), fields=["item"]
+          )
+          groups_of_items = frappe.get_all("Item", "item_group", filters=dict(
+              item_code=("in", [item.item for item in menu_items]))
+          )
+
+          parent_item_groups = frappe.get_all("Item Group", "parent_item_group",
+            filters=dict(name=("in", [item.item_group for item in groups_of_items]))
+          )
+
+          items_groups = [item.item_group for item in groups_of_items] + [item.parent_item_group for item in parent_item_groups]
+        else :
+          menu = None
+          menu_items = []
+          items_groups = []
 
         return dict(
-            pos=self.pos_profile_data(),
+            pos=pos,
             permissions=dict(
                 invoice=frappe.permissions.get_doc_permissions(
                     frappe.new_doc("Sales Invoice")),
@@ -61,6 +82,9 @@ class RestaurantSettings(Document):
             crm_settings=self.get_crm_settings(),
             allows_to_edit_item=frappe.get_all(
                 "Status Order PC", "name", filters=dict(allows_to_edit_item=1)),
+            menu=menu,
+            menu_items=menu_items,
+            items_groups=items_groups,
         )
 
     def get_crm_settings(self):

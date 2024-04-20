@@ -1,7 +1,10 @@
 class ItemsTree {
   items_manage = null;
 
-  constructor({ wrapper, order_manage }) {
+  constructor({ wrapper, order_manage, item_template, onSelect, in_menu }) {
+    this.item_template = item_template;
+    this.in_menu = in_menu; 
+    this.onSelect = onSelect;
     this.wrapper = wrapper;
     this.order_manage = order_manage;
     this.item_parent_wrapper = order_manage.item_parent_wrapper;
@@ -9,7 +12,15 @@ class ItemsTree {
     this.items = {};
     this.currency = RM.pos_profile.currency;
 
-    frappe.db.get_list("Item Group", { fields: ["*"], filters: { is_group: 1 }, order_by: "lft" }).then(groups => {
+    const filters = {
+      is_group: 1
+    }
+
+    if(this.in_menu) {
+      filters.item_group_name = ["in", RM.menu.items_groups];
+    }
+
+    frappe.db.get_list("Item Group", { fields: ["*"], filters, order_by: "lft" }).then(groups => {
       this.make_dom();
       this.render_parent_group(groups);
     });
@@ -73,7 +84,10 @@ class ItemsTree {
       $(this).addClass('active').removeClass("text-muted").siblings().removeClass('active').addClass("text-muted");
       const item_group = $(this).attr('data-group');
 
-      const filter = item_group === "All Item Groups" ? { name: item_group } : { parent_item_group: item_group };
+      const filter = item_group === "All Item Groups" ? { name: item_group } : { 
+        parent_item_group: item_group,
+        item_group_name: ["in", RM.menu.items_groups]
+      };
 
       frappe.db.get_list("Item Group", { fields: ["*"], filters: filter }).then(groups => {
         self.render_tree(groups, self.wrapper.find('.tree'), true);
