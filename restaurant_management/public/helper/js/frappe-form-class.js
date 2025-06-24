@@ -359,9 +359,20 @@ class FrappeForm extends frappe.ui.FieldGroup {
 		// validation hack: get_values will check for missing data
 		return new Promise(resolve => {
 			setTimeout(() => {
-				const doc_values = super.get_values(force);
+				let doc_values;
+				
+				try {
+					doc_values = super.get_values(force);
+				} catch (e) {
+					// Clean up any open dialogs/backdrops before showing error
+					$('.modal-backdrop').remove();
+					options.error && options.error(e.message || __("Validation failed"));
+					return;
+				}
 				
 				if (!doc_values){
+					// Clean up any open dialogs/backdrops
+					$('.modal-backdrop').remove();
 					options.error && options.error(false);
 					return;
 				}

@@ -4,8 +4,12 @@ ProcessManage = class ProcessManage {
   items = {};
   new_items_keys = [];
   orders = {};
+  items_full_data = {}; // Cache pour stocker les données complètes
 
   constructor(options) {
+    console.log('=== PROCESS MANAGE CONSTRUCTOR ===');
+    console.log('Table data:', options.table ? options.table.data : 'No table');
+    
     Object.assign(this, options);
 
     this.command_container_name = this.table.data.name + "-command_container";
@@ -74,7 +78,10 @@ ProcessManage = class ProcessManage {
       args: {},
       always: (r) => {
         RM.ready();
-
+        
+        console.log('=== COMMANDS FOOD RESPONSE ===');
+        console.log('Raw response:', r.message);
+        
         setTimeout(() => {
           if (clean) {
             this.items = {};
@@ -90,7 +97,14 @@ ProcessManage = class ProcessManage {
   }
 
   table_info(data) {
-    return `${data.room_description} (${data.table_description})`;
+    console.log('=== TABLE INFO ===');
+    console.log('Room description:', data.room_description);
+    console.log('Table description:', data.table_description);
+    console.log('Full data:', data);
+    
+    const result = `${data.room_description} (${data.table_description})`;
+    console.log('Result:', result);
+    return result;
   }
 
   render_group_container(orders = {}) {
@@ -318,13 +332,20 @@ ProcessManage = class ProcessManage {
   }
 
   make_food_commands(items = {}) {
+    console.log('=== MAKE FOOD COMMANDS ===');
+    console.log('Items received:', items);
+    
     this.render_group_container(items);
 
     Object.values(items).forEach(item => {
       const order = item.data || item;
       const items = item.items || [];
+      
+      console.log('Processing order:', order.name || order.order_name);
+      console.log('Order data:', order);
 
       items.forEach((item) => {
+        
         if (Object.keys(this.items).includes(item.identifier)) {
           this.items[item.identifier].data = item;
           this.items[item.identifier].render();
@@ -416,7 +437,16 @@ ProcessManage = class ProcessManage {
 
     if (current_item) {
       if (available) {
-        current_item.data = item;
+        // Preserve all existing data properties, only update what's provided
+        const preserved_props = ['is_customizable', 'sub_items', 'from_customize'];
+        const preserved_data = {};
+        preserved_props.forEach(prop => {
+          if (current_item.data[prop] !== undefined) {
+            preserved_data[prop] = current_item.data[prop];
+          }
+        });
+        
+        current_item.data = Object.assign({}, current_item.data, item, preserved_data);
         current_item.render();
       } else {
         current_item.remove();

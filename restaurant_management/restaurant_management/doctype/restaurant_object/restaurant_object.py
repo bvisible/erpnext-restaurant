@@ -108,7 +108,7 @@ class RestaurantObject(Document):
         if from_crm is None and not restaurant_settings.multiple_pending_order and self.orders_count > 0:
             frappe.throw(_("Complete pending orders"))
 
-    def add_order(self, client=None, from_crm=None):
+    def add_order(self, client=None, from_crm=None, dinners=None):
         # last_user = self.current_user
         self.validate_transaction(frappe.session.user, from_crm)
 
@@ -146,6 +146,12 @@ class RestaurantObject(Document):
         order.customer = from_crm
         if from_crm is not None:
             order.is_delivery = 1
+        
+        # Set the number of dinners (guests)
+        if dinners:
+            order.dinners = int(dinners)
+        else:
+            order.dinners = 1  # Default to 1 if not specified
 
         order.save()
         order.synchronize(dict(action="Add", client=client))
@@ -431,9 +437,37 @@ class RestaurantObject(Document):
 
         items = []
         groups = {}
+        
+        # Cache for table and room descriptions
+        descriptions_cache = {}
 
         for entry in frappe.get_all("Order Entry Item", "*", filters=filters, order_by="ordered_time"):
-            items.append(self.get_command_data(entry, last_status))
+            # Pre-populate cache if needed
+            if entry.table and entry.table not in descriptions_cache:
+                try:
+                    table_obj = frappe.get_doc("Restaurant Object", entry.table)
+                    descriptions_cache[entry.table] = {
+                        'description': table_obj.description,
+                        'room': table_obj.room
+                    }
+                except:
+                    descriptions_cache[entry.table] = {
+                        'description': entry.table,
+                        'room': entry.room
+                    }
+                    
+            if entry.room and entry.room not in descriptions_cache:
+                try:
+                    room_obj = frappe.get_doc("Restaurant Object", entry.room)
+                    descriptions_cache[entry.room] = {
+                        'description': room_obj.description
+                    }
+                except:
+                    descriptions_cache[entry.room] = {
+                        'description': entry.room
+                    }
+            
+            items.append(self.get_command_data(entry, last_status, descriptions_cache))
 
         for item in items:
             if item["order_name"] not in groups:
@@ -451,8 +485,20 @@ class RestaurantObject(Document):
 
         return groups
 
-    def get_command_data(self, entry, las_status=None, key_name="identifier"):
+    def get_command_data(self, entry, las_status=None, descriptions_cache=None):
         short_name = self.order_short_name(entry.parent)
+        
+        # Get proper descriptions
+        table_desc = entry.table_description
+        room_desc = entry.room_description
+        
+        # Use cache if available
+        if descriptions_cache:
+            if entry.table and entry.table in descriptions_cache:
+                table_desc = descriptions_cache[entry.table].get('description', entry.table)
+            if entry.room and entry.room in descriptions_cache:
+                room_desc = descriptions_cache[entry.room].get('description', entry.room)
+        
         return dict(
             identifier=entry.identifier,
             item_group=entry.item_group,
@@ -463,8 +509,8 @@ class RestaurantObject(Document):
             room=entry.room,
             branch=entry.branch,
             table=entry.table,
-            table_description=entry.table_description if entry.table_description is not None else entry.table,
-            room_description=entry.room_description if entry.room_description is not None else entry.room,
+            table_description=table_desc,
+            room_description=room_desc,
             short_name=short_name,
             qty=entry.qty,
             rate=entry.rate,
@@ -476,7 +522,11 @@ class RestaurantObject(Document):
             notes=entry.notes,
             # frappe.format_value(entry.creation, {"fieldtype": "Datetime"}),
             ordered_time=entry.ordered_time or frappe.utils.now_datetime(),
-            process_status_data=self.process_status_data(entry)
+            process_status_data=self.process_status_data(entry),
+            # Include customization fields
+            is_customizable=entry.is_customizable,
+            sub_items=entry.sub_items,
+            from_customize=entry.from_customize
         )
 
     def process_status_data(self, item):

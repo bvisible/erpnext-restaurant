@@ -186,7 +186,7 @@ class MenuManage extends ObjectManage {
       return `
         <div
           class="small-box item item-code"
-          item-code="${item_code}" is-customizable=${is_customizable} style="border-radius: 5px 20px 25px; width: 100%;">
+          item-code="${item_code}" is-customizable=${is_customizable} style="border-radius: 5px; width: 100%;">
             <div class="inner" style="position: inherit; z-index: 100">
                 <h4 class="title">
                     <i class="fa fa-circle" style="color: var(--${

@@ -369,6 +369,10 @@ class PayForm extends DeskForm {
       error: (r) => {
         RM.ready();
         this.reset_payment_button();
+        
+        // Clean up any stray modal backdrops
+        $('.modal-backdrop').remove();
+        
         if (r !== false && typeof r === "string") {
           frappe.msgprint(r);
         }
@@ -429,7 +433,7 @@ class PayForm extends DeskForm {
 
   set_total_payment() {
     if (this.actions.pay) {
-      this.actions.pay.set_content(`<span style="font-size: 25px; font-weight: 400">{{text}} ${this.order.total_money}</span>`);
+      this.actions.pay.set_content(`<span style="font-size: 25px; font-weight: 400; color: white;">{{text}} ${this.order.total_money}</span>`);
       this.actions.pay.val(__("Pay"));
     }
   }

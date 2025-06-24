@@ -9,6 +9,7 @@ class OrderItem {
   constructor(options) {
     Object.assign(this, options);
 
+
     this.attending_status = this.order.data.attending_status;
     this.status_enabled_for_edit = [this.attending_status, "Pending", null, undefined, ""];
     this.status_enabled_for_delete = [this.attending_status, "Pending", "Sent", null, undefined, ""];
@@ -47,6 +48,8 @@ class OrderItem {
     const ps = this.data.process_status_data;
 
     this.amount.val(RM.format_currency(this.data.amount));
+    
+    // Update detail without customizations (they will be shown separately)
     this.detail.val(this.html_detail);
     this.notes.val(this.data.notes);
     this.icon.val(`<i class="${ps.icon}" style="color: ${ps.color}"></i>`);
@@ -75,7 +78,13 @@ class OrderItem {
       content: this.template
     });
 
-    this.order.container.append(this.row.html());
+    // We need to append to the ul inside the order container
+    // The ul is in the order_manage.order_entry_container
+    const order_entry_container = this.order.order_manage.order_entry_container;
+    
+    if (order_entry_container) {
+      $(order_entry_container).append(this.row.html());
+    }
   }
 
   async select(scroller = false) {
@@ -254,6 +263,28 @@ class OrderItem {
       properties: { class: "form-editor p-2" }
     });
 
+    // Create customization display
+    let customizationHtml = '';
+    if (this.data.is_customizable && this.data.sub_items) {
+      try {
+        const sub_items = JSON.parse(this.data.sub_items);
+        const included_items = sub_items.filter(item => item.included === 1);
+        
+        if (included_items.length > 0) {
+          customizationHtml = '<div class="customization-display" style="margin-top: 20px;">';
+          included_items.forEach(item => {
+            customizationHtml += '<div><small style="color: #6c757d;">';
+            customizationHtml += '<span class="fa fa-plus-circle" style="color: #28a745; font-size: 16px; margin-right: 5px;"></span>';
+            customizationHtml += item.item_code;
+            customizationHtml += '</small></div>';
+          });
+          customizationHtml += '</div>';
+        }
+      } catch (e) {
+        // If parsing fails, just ignore
+      }
+    }
+
     const header_template = `
       ${this.icon.html()}
       <div class="media-body">
@@ -261,6 +292,7 @@ class OrderItem {
               ${this.amount.html()}
           </a>
           ${this.detail.html()}
+          ${customizationHtml}
           <p class="text-muted m-0">  ${this.notes.html()}</p>
       </div>
       `
@@ -291,6 +323,21 @@ class OrderItem {
       await this.form_editor.reload(this.data);
 
       this.form_editor[!selected || this.form_editor.in_modal ? "show" : "toggle"]();
+      
+      // Re-add customization info when reloading
+      if (this.data.is_customizable && this.data.sub_items) {
+        setTimeout(() => {
+          this.add_customization_info();
+          // Wait longer to ensure form is fully initialized
+          this.hide_all_fields_except_notes();
+        }, 100);
+      } else {
+        // For non-customizable items, hide all fields except notes when reloading
+        // Wait longer to ensure form is fully initialized
+        setTimeout(() => {
+          this.hide_all_fields_except_notes();
+        }, 100);
+      }
     } else {
       this.form_editor = new OrderItemEditor({
         order_item: this,
@@ -334,6 +381,22 @@ class OrderItem {
         }
       });
     }
+    
+    // Add customization info and edit button after form is created
+    if (this.data.is_customizable && this.data.sub_items && !this.customization_initialized) {
+      this.customization_initialized = true;
+      setTimeout(() => {
+        this.add_customization_info();
+        // Wait longer to ensure form is fully initialized
+        this.hide_all_fields_except_notes();
+      }, 100);
+    } else {
+      // For non-customizable items, hide all fields except notes
+      // Wait longer to ensure form is fully initialized
+      setTimeout(() => {
+        this.hide_all_fields_except_notes();
+      }, 300);
+    }
   }
 
   check_status() {
@@ -364,6 +427,196 @@ class OrderItem {
 			</small>` : ''
 
     return `${this.data.qty} x @${RM.format_currency(rate)} ${discount_info}`;
+  }
+  
+  refresh_customization_display() {
+    // Find the existing customization display in the header
+    const header = this.row.find('.widget-user-header');
+    const customizationDisplay = header.find('.customization-display');
+    
+    // Remove existing customization display
+    customizationDisplay.remove();
+    
+    // Create new customization display
+    if (this.data.is_customizable && this.data.sub_items) {
+      try {
+        const sub_items = JSON.parse(this.data.sub_items);
+        const included_items = sub_items.filter(item => item.included === 1);
+        
+        if (included_items.length > 0) {
+          let customizationHtml = '<div class="customization-display" style="margin-top: 5px;">';
+          included_items.forEach(item => {
+            customizationHtml += '<div><small style="color: #6c757d;">';
+            customizationHtml += '<span class="fa fa-plus-circle" style="color: #28a745; font-size: 16px; margin-right: 5px;"></span>';
+            customizationHtml += item.item_code;
+            customizationHtml += '</small></div>';
+          });
+          customizationHtml += '</div>';
+          
+          // Insert after the detail paragraph
+          header.find('.media-body > p:first').after(customizationHtml);
+        }
+      } catch (e) {
+        console.error('Error updating customization display:', e);
+      }
+    }
+  }
+  
+  add_customization_info() {
+    if (!this.form_editor || !this.data.is_customizable || !this.data.sub_items) return;
+    
+    try {
+      const form_container = this.form_editor_container.JQ();
+      
+      // Remove any existing customization info first
+      form_container.find('.customization-info').remove();
+      
+      const sub_items = JSON.parse(this.data.sub_items);
+      const included_items = sub_items.filter(item => item.included === 1);
+      
+      if (sub_items.length > 0) {
+        // Check if item can be edited (only in Pending or Attending status)
+        const canEdit = this.is_enabled_to_edit && ['Pending', 'Attending'].includes(this.data.status);
+        
+        // Add customization info section with edit button only (no duplicate display)
+        const custom_info = $(`
+          <div class="customization-info" style="margin: 10px 0; padding: 10px; background-color: #e3f2fd; border-radius: 5px; border: 1px solid #1976d2;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>Options personnalisées</strong>
+              </div>
+              ${canEdit ? 
+                `<button class="btn btn-sm btn-primary edit-custom-btn" style="white-space: nowrap;">
+                  <span class="fa fa-edit"></span> Modifier
+                </button>` :
+                `<span class="text-muted" style="font-size: 12px;">
+                  <i class="fa fa-lock"></i> Commande envoyée
+                </span>`
+              }
+            </div>
+          </div>
+        `);
+        
+        // Add the info at the top
+        form_container.prepend(custom_info);
+        
+        // Add click handler for edit button if it exists
+        if (canEdit) {
+          custom_info.find('.edit-custom-btn').on('click', () => {
+            this.show_edit_customization_modal();
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Error adding customization info:', e);
+    }
+  }
+  
+  hide_all_fields_except_notes() {
+    if (!this.form_editor) return;
+    
+    try {
+      const form_container = this.form_editor_container.JQ();
+      
+      // Hide all field wrappers
+      form_container.find('.frappe-control').each(function() {
+        const $this = $(this);
+        const fieldname = $this.attr('data-fieldname');
+        
+        if (fieldname !== 'notes') {
+          $this.hide();
+        } else {
+          $this.show();
+        }
+      });
+      
+      // Also hide section breaks and column breaks except those containing notes
+      form_container.find('.section-head, .section-body').each(function() {
+        const $section = $(this);
+        const hasNotes = $section.find('[data-fieldname="notes"]').length > 0;
+        
+        if (!hasNotes) {
+          $section.hide();
+        }
+      });
+      
+      // Ensure notes field is visible
+      const notes_field = form_container.find('[data-fieldname="notes"]');
+      if (notes_field.length > 0) {
+        notes_field.show();
+        notes_field.closest('.section-body').show();
+        notes_field.closest('.frappe-control').show();
+      }
+      
+    } catch (e) {
+      console.error('Error hiding fields:', e);
+    }
+  }
+  
+  show_edit_customization_modal() {
+    if (!this.data.is_customizable || !this.data.sub_items) return;
+    
+    try {
+      const sub_items = JSON.parse(this.data.sub_items);
+      
+      // Create modal for editing customizations
+      const dialog = new frappe.ui.Dialog({
+        title: `Modifier les options - ${this.data.item_name}`,
+        fields: sub_items.map(item => ({
+          fieldtype: 'Check',
+          fieldname: item.item_code,
+          label: `${item.item_code} (+${RM.format_currency(item.rate)})`,
+          default: item.included === 1 ? 1 : 0
+        })),
+        primary_action_label: 'Mettre à jour',
+        primary_action: (values) => {
+          // Update sub_items based on selections
+          sub_items.forEach(item => {
+            item.included = values[item.item_code] ? 1 : 0;
+          });
+          
+          // Calculate new rate
+          const base_rate = parseFloat(this.data.price_list_rate) || 39.9;
+          let new_rate = base_rate;
+          sub_items.forEach(item => {
+            if (item.included === 1) {
+              new_rate += parseFloat(item.rate);
+            }
+          });
+          
+          // Update data
+          this.data.sub_items = JSON.stringify(sub_items);
+          this.data.rate = new_rate;
+          
+          // Update display
+          if (this.form_editor) {
+            this.form_editor.set_value('rate', new_rate);
+          }
+          this.calculate();
+          
+          // Recreate the customization display in the header
+          this.refresh_customization_display();
+          
+          // Update the rest of the display
+          this.reset_html();
+          
+          // Update server
+          this.update(true);
+          
+          // Refresh customization info
+          this.form_editor_container.JQ().find('.customization-info').remove();
+          this.add_customization_info();
+          
+          dialog.hide();
+        }
+      });
+      
+      dialog.show();
+      
+    } catch (e) {
+      console.error('Error showing customization modal:', e);
+      frappe.msgprint('Erreur lors de l\'ouverture de la modal de personnalisation');
+    }
   }
 }
 

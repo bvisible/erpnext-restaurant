@@ -2,7 +2,7 @@ class DeskForm extends FrappeForm {
 	is_hide = true;
 	has_footer = true;
 	has_primary_action = true;
-  base_url = "restaurant_management.restaurant_management.doctype.desk_form.desk_form.";
+  	base_url = "restaurant_management.restaurant_management.doctype.desk_form.desk_form.";
 
 	constructor(options) {
 		super(options);
@@ -185,13 +185,29 @@ class DeskForm extends FrappeForm {
 
 	show() {
 		this.is_hide = false;
-		this._wrapper.show();
+		
+		if (this.in_modal && this._wrapper && typeof this._wrapper.show === 'function') {
+			// For modal dialogs, use the dialog's show method
+			this._wrapper.show();
+		} else if (this._wrapper) {
+			// For non-modal forms, show the wrapper element
+			this.$$wrapper.show();
+		}
+		
 		return this;
 	}
 
 	hide() {
 		this.is_hide = true;
-		this._wrapper.hide();
+		
+		if (this.in_modal && this._wrapper && typeof this._wrapper.hide === 'function') {
+			// For modal dialogs, use the dialog's hide method
+			this._wrapper.hide();
+		} else if (this._wrapper) {
+			// For non-modal forms, hide the wrapper element
+			this.$$wrapper.hide();
+		}
+		
 		return this;
 	}
 
@@ -277,5 +293,10 @@ class DeskForm extends FrappeForm {
                 <div class="widget-control"></div>
             </div>
         </div>`
+	}
+	
+	cleanup_backdrops() {
+		// Force cleanup of any orphaned modal backdrops
+		$('.modal-backdrop').remove();
 	}
 }

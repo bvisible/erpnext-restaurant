@@ -188,7 +188,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "address.posa_delivery_charges",
    "fieldname": "delivery_charges",
    "fieldtype": "Link",
    "label": "Delivery Charges",

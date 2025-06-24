@@ -51,7 +51,8 @@ app_include_js = [
     "/assets/restaurant_management/helper/js/desk-modal.js",
     "/assets/restaurant_management/helper/js/frappe-helper-api.js",
     "/assets/restaurant_management/helper/js/frappe-form-class.js",
-    "/assets/restaurant_management/helper/js/desk-form-class.js"
+    "/assets/restaurant_management/helper/js/desk-form-class.js",
+    "/assets/restaurant_management/helper/js/modal-backdrop-cleanup.js"
 ]
 
 # include js, css files in header of web template

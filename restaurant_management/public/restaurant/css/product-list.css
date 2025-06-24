@@ -83,28 +83,16 @@ div {
     /*color: #b0bac2*/
 }
 
-
-
-
-
 .small-box.item {
-    /*background: #fff;*/
     border: var(--default_line);
     border-radius: 3px;
     border-bottom-width: 2px;
     padding-bottom: 3px;
     overflow: hidden;
     cursor: pointer;
-
     display: block;
     position: relative;
-    /*margin-bottom: 20px;
-    color: black;
-}
-
-
-.bg-info, .bg-info>a {
-    /*color: #fff!important;*/
+    padding-bottom: 15px;
 }
 
 .bg-info {

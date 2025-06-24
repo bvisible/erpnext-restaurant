@@ -82,7 +82,7 @@ class TableOrder(Document):
     @property
     def products_not_ordered_count(self):
         return frappe.db.count("Order Entry Item", filters={
-            "parenttype": "Table Order", "parent": self.name, "status": status_attending
+            "parenttype": "Table Order", "parent": self.name, "status": ["in", [status_attending, "Pending"]]
         })
 
     @property
@@ -320,7 +320,7 @@ class TableOrder(Document):
                     if not item["item_tax_rate"] in taxes:
                         taxes[item["item_tax_rate"]] = item["item_tax_rate"]
 
-        in_invoice_taxes = [t for t in invoice.get("taxes")]
+        in_invoice_taxes = [t.account_head for t in invoice.get("taxes", [])]
 
         for tax in taxes:
             if tax is not None:
@@ -335,21 +335,23 @@ class TableOrder(Document):
 
         invoice.cost_center = cost_center
 
+        # Get the tax template from POS Profile first
         tax_template = frappe.db.get_value(
-            "Sales Taxes and Charges Template", {"company": self.company})
+            "POS Profile", self.pos_profile, "taxes_and_charges")
+        
+        if not tax_template:
+            # Fallback to any template for the company
+            tax_template = frappe.db.get_value(
+                "Sales Taxes and Charges Template", {"company": self.company})
 
         for t in set(in_invoice_taxes):
             tax = frappe.db.get_value("Sales Taxes And Charges", dict(
-                parenttype=tax_template, account_head=t), ["charge_type", "rate", "amount", "included_in_print_rate"], as_dict=True)
+                parenttype="Sales Taxes and Charges Template", parent=tax_template, account_head=t), ["charge_type", "rate", "amount", "included_in_print_rate"], as_dict=True)
 
             if isinstance(tax, type(None)):
-                invoice.append('taxes', {
-                    "charge_type": "On Net Total",
-                    "account_head": t,
-                    "rate": 0,
-                    "description": t,
-                    "included_in_print_rate": included_in_print_rate
-                })
+                # Skip taxes that don't exist in the template
+                # This prevents adding taxes from wrong company
+                continue
             else:
                 invoice.append('taxes', {
                     "charge_type": tax.charge_type,
@@ -511,6 +513,7 @@ class TableOrder(Document):
                 serial_no=entry["serial_no"],
                 sub_items=entry["sub_items"],
                 is_customizable=entry["is_customizable"],
+                from_customize=entry.get("from_customize", 0),
             )
 
             self.validate()
@@ -519,7 +522,7 @@ class TableOrder(Document):
                 self.append('entry_items', data)
                 return "aggregate"
             else:
-                values = ','.join('='.join((f"`{key}`", """{value}""".format(value=(f"'{val}'" if val is not None else "") if key == "item_tax_template" else frappe.db.escape(val)))) for (key, val) in data.items())
+                values = ','.join('='.join((f"`{key}`", """{value}""".format(value=(f"'{val}'" if val is not None else "") if key in ["item_tax_template", "item_tax_rate"] else frappe.db.escape(val)))) for (key, val) in data.items())
                 base_sql = f"UPDATE `tabOrder Entry Item` set {values}"
  
                 frappe.db.sql("""{base_sql} WHERE `identifier`='{identifier}'""".format(base_sql = base_sql, identifier=entry["identifier"]))
@@ -563,6 +566,7 @@ class TableOrder(Document):
                 serial_no=entry_item["serial_no"],
                 sub_items=entry_item["sub_items"],
                 is_customizable=entry_item["is_customizable"],
+                from_customize=entry_item.get("from_customize", 0),
             ))
             #item.serial_no = None
 
@@ -594,9 +598,12 @@ class TableOrder(Document):
 
         _address = frappe.get_doc("Address", address)
 
-        charges = 0 if self.delivery_branch == 1 else frappe.db.get_value(
-            "Delivery Charges", _address.posa_delivery_charges, "default_rate"
-        )
+        # Check if posa_delivery_charges exists in the address
+        charges = 0
+        if self.delivery_branch != 1 and hasattr(_address, 'posa_delivery_charges') and _address.posa_delivery_charges:
+            charges = frappe.db.get_value(
+                "Delivery Charges", _address.posa_delivery_charges, "default_rate"
+            ) or 0
 
         return dict(
             address=_address.get_display(),
@@ -674,7 +681,8 @@ class TableOrder(Document):
                     "has_serial_no",
                     "serial_no",
                     "sub_items",
-                    "is_customizable"
+                    "is_customizable",
+                    "from_customize"
                 ]}
 
                 row["order_name"] = item.parent

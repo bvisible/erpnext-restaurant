@@ -2,7 +2,7 @@ class TableOrder {
   constructor(options) {
     Object.assign(this, options);
 
-    this.items = [];
+    this.items = {};
     this.edit_form = null;
     this.divide_account_modal = null;
     this.pay_form = null;
@@ -150,38 +150,79 @@ class TableOrder {
     return has;
   }
 
+  get_pending_items_count() {
+    let count = 0;
+    this.in_items(item => {
+      if (item.data.status === "Pending" || item.data.status === this.data.attending_status) {
+        count++;
+      }
+    });
+    return count;
+  }
+
   push_item(new_item) {
     if (!this.data.customer) {
       this.order_manage.components.customer.highlight();
       frappe.throw(__("Please set a Customer"));
+      // Clean up any orphaned backdrops after validation error
+      setTimeout(() => {
+        if (window.cleanOrphanedBackdrops) {
+          window.cleanOrphanedBackdrops();
+        }
+      }, 500);
     }
 
-    let test_item = null;
-    this.in_items(item => {
-      if (item.data.item_code === new_item.item_code) {
-        if (RM.allows_to_edit_item.includes(item.data.status)) {
+    let order_item = null;
+    // For customizable items or items with customizations, always create a new item
+    // For non-customizable items without customizations, check if we can merge with existing
+    const has_customizations = new_item.is_customizable || (new_item.sub_items && new_item.sub_items !== "[]");
+    
+    if (!has_customizations) {
+      this.in_items(item => {
+        if (item.data.item_code === new_item.item_code && 
+            !item.data.is_customizable &&
+            (!item.data.sub_items || item.data.sub_items === "[]") &&
+            RM.allows_to_edit_item.includes(item.data.status)) {
           item.data.qty += new_item.qty;
           item.data.rate = new_item.rate;
           item.data.price_list_rate = new_item.price_list_rate;
-          item.data.is_customizable = new_item.is_customizable;
-          item.data.sub_items = new_item.sub_items;
           item.data.item_tax_rate = new_item.item_tax_rate;
           item.data.status = "Pending";
           item.calculate();
-          test_item = item;
+          order_item = item;
         }
-      }
-    });
+      });
+    }
 
-    test_item = test_item || this.add_locale_item(new_item);
-    if (test_item != null) {
-      test_item.update();
-      test_item.select(true);
+    order_item = order_item || this.add_locale_item(new_item);
+    
+    if (order_item != null) {
+      
+      // Update items count
+      this.data.items_count = Object.keys(this.items).length;
+      this.show_items_count();
+      
+      // Update the order status in the UI
+      this.order_manage.order_status_message();
+      
+      // Check buttons status to enable Order button
+      this.order_manage.check_buttons_status();
+      
+      // Calculate and update display without server call
+      order_item.calculate();
+      order_item.reset_html();
+      
+      // Now make the server call
+      order_item.update();
+      
+      // Select the item
+      order_item.select(true);
     }
   }
 
   add_locale_item(item) {
     const identifier = item.identifier;
+    
     this.items[identifier] = new OrderItem({
       identifier: identifier,
       order: this,
@@ -241,7 +282,16 @@ class TableOrder {
     items.forEach((item, index) => {
       test_item = this.get_item(item.identifier) || this.add_locale_item(item);
       if (test_item) {
-        test_item.data = item;
+        // Preserve customization data if not present in the update
+        const preserved_data = {};
+        if (test_item.data.is_customizable !== undefined && item.is_customizable === undefined) {
+          preserved_data.is_customizable = test_item.data.is_customizable;
+        }
+        if (test_item.data.sub_items !== undefined && item.sub_items === undefined) {
+          preserved_data.sub_items = test_item.data.sub_items;
+        }
+        
+        test_item.data = Object.assign({}, item, preserved_data);
         test_item.update(false);
 
         if (test_item.data.qty > 0) {
@@ -521,7 +571,9 @@ class TableOrder {
   }
 
   order() {
-    if (RM.busy_message() || this.data.products_not_ordered <= 0) {
+    // Use client-side count instead of server-side products_not_ordered
+    const pending_count = this.get_pending_items_count();
+    if (RM.busy_message() || pending_count <= 0) {
       return;
     }
 
@@ -711,7 +763,7 @@ class TableOrder {
 }
 
 class CustomerEditor extends DeskForm {
-  form_name = "Restaurant Order Customer";
+  form_name = "restaurant_order_customer";
   constructor(props) {
     super(props);
     this.doc_name = this.order.data.name;

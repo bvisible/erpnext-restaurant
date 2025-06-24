@@ -20,6 +20,7 @@ class OrderManage extends ObjectManage {
     this.item_container_name = `items-container-${this.table_name}`;
     this.invoice_container_name = `invoice-container-${this.table_name}`;
     this.not_selected_order = null;
+    this.pending_dinners = options.pending_dinners || null;
     this.init_synchronize();
     this.initialize();
   }
@@ -62,6 +63,37 @@ class OrderManage extends ObjectManage {
       this.title,
       () => {
         this.make();
+        
+        // Set up close event handlers after modal is created
+        setTimeout(() => {
+          if (this.modal && this.modal.modal && this.modal.modal.$wrapper) {
+            const $wrapper = this.modal.modal.$wrapper;
+            
+            // Override the close button click
+            $wrapper.find('.btn-modal-close').off('click').on('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              this.close();
+              return false;
+            });
+            
+            // Intercept the hide.bs.modal event
+            $wrapper.off('hide.bs.modal').on('hide.bs.modal', (e) => {
+              e.preventDefault();
+              this.close();
+              return false;
+            });
+            
+            // Handle ESC key
+            $(document).off('keydown.orderManage').on('keydown.orderManage', (e) => {
+              if (e.key === 'Escape' && this.modal && this.modal.modal && this.modal.modal.$wrapper.is(':visible')) {
+                e.preventDefault();
+                this.close();
+                return false;
+              }
+            });
+          }
+        }, 500);
       }
     );
   }
@@ -97,7 +129,6 @@ class OrderManage extends ObjectManage {
     } else {
       this.modal.show();
     }
-    //if(RM.crm_customer){
 
     if (this.transferring_order) {
       if (this.current_order != null) {
@@ -108,12 +139,157 @@ class OrderManage extends ObjectManage {
       }
       this.transferring_order = false;
     }
+    
+    // Reattach events for product items when modal is shown
+    // We need to wait a bit for the DOM to be ready
+    setTimeout(() => {
+      console.log('=== ORDER MANAGE SHOW - Reattaching events ===');
+      const items_tree = this.storage();
+      console.log('Items tree exists:', !!items_tree);
+      
+      if (items_tree && items_tree.groups) {
+        // Find all open categories and reattach events
+        const openCategories = [];
+        
+        // Check each category container to see if it's visible
+        this.modal.container.find('[area-items]').each(function() {
+          if ($(this).is(':visible')) {
+            const categoryName = $(this).attr('area-items');
+            openCategories.push(categoryName);
+          }
+        });
+        
+        console.log('Found open categories:', openCategories);
+        
+        // Reattach events for all open categories
+        openCategories.forEach(categoryName => {
+          if (items_tree.groups[categoryName] && items_tree.groups[categoryName].items_manage) {
+            console.log('Reattaching events for category:', categoryName);
+            items_tree.groups[categoryName].items_manage.reattach_events();
+          }
+        });
+        
+        // Also check if we have any visible items but no groups initialized yet
+        const visibleProductItems = this.modal.container.find('.item-code');
+        console.log('Total visible product items in DOM:', visibleProductItems.length);
+        
+        // If no groups were processed but we have visible items, try current_item_manage
+        if (openCategories.length === 0 && visibleProductItems.length > 0 && items_tree.current_item_manage) {
+          console.log('No open categories found, using current_item_manage');
+          items_tree.current_item_manage.reattach_events();
+        }
+      }
+    }, 200);
 
     this.make_reservation();
   }
 
   close() {
-    this.modal.hide()
+    // Prevent multiple calls
+    if (this._closing) {
+      return;
+    }
+    this._closing = true;
+    
+    console.log('=== CLOSING ORDER MANAGE ===');
+    
+    // Clean up event handlers
+    if (this.modal && this.modal.modal && this.modal.modal.$wrapper) {
+      this.modal.modal.$wrapper.off('hide.bs.modal');
+      this.modal.modal.$wrapper.find('.btn-modal-close').off('click');
+    }
+    $(document).off('keydown.orderManage');
+    
+    // Close any payment forms or other forms first
+    if (this.current_order && this.current_order.pay_form) {
+      console.log('Closing payment form');
+      this.current_order.pay_form.hide();
+    }
+    
+    // Refresh the table to update its status (orders count, icons, etc.)
+    if (this.table) {
+      // Force update table data from server
+      frappeHelper.api.call({
+        model: "Restaurant Object",
+        name: this.table.data.name,
+        method: "get_data",
+        args: {}, // Empty args to ensure method is called
+        always: (r) => {
+          if (r && r.message) {
+            // Update table data with new data from server
+            this.table.data = r.message;
+            
+            // Update the visual elements
+            // 1. Update orders count
+            this.table.data.orders_count = r.message.orders_count || 0;
+            this.table.set_orders_count();
+            
+            // 2. Update customer indicator
+            this.table.data.customer = r.message.customer || "";
+            if (this.table.has_customer) {
+              if (this.table.data.customer || this.table.data.status === "Reserved") {
+                this.table.has_customer.remove_class("hide");
+              } else {
+                this.table.has_customer.add_class("hide");
+              }
+            }
+            
+            // 3. Update other visual elements if needed
+            if (this.table.reset_data) {
+              this.table.reset_data(r.message);
+            }
+          }
+        }
+      });
+    }
+    
+    // Hide the modal
+    if (this.modal && this.modal.hide) {
+      this.modal.hide();
+    }
+    
+    // Force close absolutely everything after hiding main modal
+    setTimeout(() => {
+      this.force_cleanup_all_modals();
+      
+      // Reset the closing flag
+      this._closing = false;
+    }, 100);
+  }
+  
+  force_cleanup_all_modals() {
+    // Close all Frappe dialogs
+    if (frappe.ui.open_dialogs && frappe.ui.open_dialogs.length) {
+      const dialogs = [...frappe.ui.open_dialogs];
+      dialogs.forEach((dialog) => {
+        try {
+          if (dialog) {
+            if (dialog.$wrapper) {
+              dialog.$wrapper.modal('hide');
+              dialog.$wrapper.remove();
+            }
+            if (dialog.hide && typeof dialog.hide === 'function') {
+              dialog.hide();
+            }
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      });
+      frappe.ui.open_dialogs.length = 0;
+    }
+    
+    // Remove ALL modal elements and backdrops
+    $('.modal').modal('hide');
+    $('.modal').remove();
+    $('.modal-backdrop').remove();
+    
+    // Clean body
+    $('body').removeClass('modal-open').css({'overflow': '', 'padding-right': ''});
+    
+    // Remove any dialog containers
+    $('.msgprint-dialog').remove();
+    $('.ui-dialog').remove();
   }
 
   make() {
@@ -160,7 +336,9 @@ class OrderManage extends ObjectManage {
     this.#components.delete = RMHelper.default_button("Delete", 'trash', () => this.delete_current_order(), DOUBLE_CLICK);
 
     this.modal.title_container.empty().append(
-      RMHelper.return_main_button(this.title, () => this.modal.hide()).html()
+      RMHelper.return_main_button(this.title, () => {
+        this.close();
+      }).html()
     );
 
     this.modal.buttons_container.prepend(`
@@ -187,7 +365,9 @@ class OrderManage extends ObjectManage {
             this.table.data.customer = this.customer_editor.doc.customer;
             this.set_title();
             this.modal.title_container.empty().append(
-              RMHelper.return_main_button(this.title, () => this.modal.hide()).html()
+              RMHelper.return_main_button(this.title, () => {
+                this.close();
+              }).html()
             );
           },
           primary_action_label: "Save",
@@ -258,6 +438,24 @@ class OrderManage extends ObjectManage {
     <style>
       .item-action .tab-label {
         display: unset;
+      }
+      
+      /* Active input button styling */
+      .entry-order-editor.active-input {
+        background-color: var(--primary-color) !important;
+        color: white !important;
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.3) !important;
+      }
+      
+      .entry-order-editor {
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+      
+      .entry-order-editor:not(:disabled):hover {
+        background-color: var(--bg-color);
+        border-color: var(--primary-color);
       }
 
       .order-manage.mob .tab {
@@ -463,7 +661,7 @@ class OrderManage extends ObjectManage {
     }
   }
 
-  toggle_main_section(option) {
+  toggle_main_section() {
     /*this.current_layout = option || (this.current_layout === "items" ? "invoice" : "items");
     if (this.current_layout === "items"){
         this.items_wrapper.show();
@@ -485,8 +683,23 @@ class OrderManage extends ObjectManage {
     this.in_objects(obj => {
       if (["qty", "discount", "rate"].includes(obj.properties.name)) {
         obj.val("", false);
+        obj.remove_class("active-input");
       }
     });
+  }
+  
+  set_active_input(active_obj) {
+    // Remove active class from all input buttons
+    this.in_objects(obj => {
+      if (["qty", "discount", "rate"].includes(obj.properties.name)) {
+        obj.remove_class("active-input");
+      }
+    });
+    
+    // Add active class to the selected input
+    if (active_obj) {
+      active_obj.add_class("active-input");
+    }
   }
 
   make_edit_input() {
@@ -518,6 +731,7 @@ class OrderManage extends ObjectManage {
         },
         on: {
           'click': (obj) => {
+            this.set_active_input(obj);
             this.num_pad.input = obj;
           }
         }
@@ -531,6 +745,7 @@ class OrderManage extends ObjectManage {
         },
         on: {
           'click': (obj) => {
+            this.set_active_input(obj);
             this.num_pad.input = obj;
           }
         }
@@ -544,6 +759,7 @@ class OrderManage extends ObjectManage {
         },
         on: {
           'click': (obj) => {
+            this.set_active_input(obj);
             this.num_pad.input = obj;
           }
         }
@@ -867,7 +1083,8 @@ class OrderManage extends ObjectManage {
         if (this.current_order.has_queue_items()) {
           this.#components.Order.enable().add_class("btn-danger").val(__("Add"));
         } else {
-          const orders_count = this.current_order.data.products_not_ordered;
+          // Use client-side count that includes Pending items
+          const orders_count = this.current_order.get_pending_items_count();
           this.orders_count_badge.val(`${orders_count}`);
           const [action, text] = [orders_count > 0 ? "enable" : "disable", orders_count > 0 ? this.orders_count_badge.html() : ""];
 
@@ -905,6 +1122,8 @@ class OrderManage extends ObjectManage {
       this.in_objects((input) => {
         input.disable();
       });
+      // Clear active input when no item is selected
+      this.set_active_input(null);
       return;
     }
 
@@ -927,6 +1146,12 @@ class OrderManage extends ObjectManage {
     objects.Minus.prop("disabled", !item_is_enabled_to_edit);
     objects.Plus.prop("disabled", !item_is_enabled_to_edit);
     objects.Trash.prop("disabled", !item.is_enabled_to_delete);
+    
+    // Set Qty as the default active input when an item is selected
+    if (item_is_enabled_to_edit) {
+      this.set_active_input(objects.Qty);
+      this.num_pad.input = objects.Qty;
+    }
 
     item.check_status();
   }
@@ -944,20 +1169,65 @@ class OrderManage extends ObjectManage {
   }
 
   add_order() {
-    RM.working("Adding Order");
-    frappeHelper.api.call({
-      model: "Restaurant Object",
-      name: this.table.data.name,
-      method: "add_order",
-      args: { client: RM.client },
-      always: (r) => {
-        RM.ready();
-        if (typeof r.message != "undefined") {
-          RM.sound_submit();
-          //RM.is_mobile && this.select_last_order();
+    const create_order_with_dinners = (dinners) => {
+      RM.working("Adding Order");
+      frappeHelper.api.call({
+        model: "Restaurant Object",
+        name: this.table.data.name,
+        method: "add_order",
+        args: { 
+          client: RM.client,
+          dinners: dinners || 1
+        },
+        always: (r) => {
+          RM.ready();
+          if (typeof r.message != "undefined") {
+            RM.sound_submit();
+            // Automatically select the newly created order
+            if (r.message && r.message.name) {
+              setTimeout(() => {
+                const new_order = this.get_order(r.message.name);
+                if (new_order) {
+                  new_order.select();
+                }
+              }, 100);
+            }
+          }
+        },
+      });
+    };
+
+    // If we have pending dinners from table opening, use them
+    if (this.pending_dinners) {
+      const dinners = this.pending_dinners;
+      this.pending_dinners = null; // Clear after use
+      create_order_with_dinners(dinners);
+    } else {
+      // Otherwise, ask for number of guests
+      const dialog = new frappe.ui.Dialog({
+        title: __('New Order'),
+        fields: [
+          {
+            fieldtype: 'Int',
+            label: __('Number of Guests'),
+            fieldname: 'dinners',
+            default: 1,
+            reqd: 1,
+            description: __('How many guests for this order?')
+          }
+        ],
+        primary_action_label: __('Create Order'),
+        primary_action: (values) => {
+          if (!values.dinners || values.dinners < 1) {
+            frappe.msgprint(__('Please enter a valid number of guests'));
+            return;
+          }
+          dialog.hide();
+          create_order_with_dinners(values.dinners);
         }
-      },
-    });
+      });
+      dialog.show();
+    }
   }
 
   get_orders(current = null) {
@@ -1059,7 +1329,25 @@ class OrderManage extends ObjectManage {
       $(this.order_container).prepend(new_order_button.html());
     }
 
-    RM.is_mobile && this.select_last_order();
+    // If no orders exist and we have pending_dinners, create one automatically
+    if (this.child_count === 0 && this.pending_dinners) {
+      setTimeout(() => {
+        this.add_order();
+      }, 100);
+      return;
+    }
+    
+    // Automatically select the only order if there's just one
+    if (this.child_count === 1 && !current) {
+      const single_order = this.get_child_by_index(0);
+      if (single_order) {
+        setTimeout(() => {
+          single_order.select();
+        }, 0);
+      }
+    } else if (RM.is_mobile) {
+      this.select_last_order();
+    }
   }
 
   append_order(order, current = null) {
@@ -1127,16 +1415,26 @@ class OrderManage extends ObjectManage {
 
     if (this.current_order) {
       container.addClass("has-order");
-      if (this.current_order.items_count === 0) {
+      
+      // Use the actual items count from the items object
+      const actual_items_count = Object.keys(this.current_order.items || {}).length;
+      
+      if (actual_items_count === 0) {
         container.removeClass("has-items");
+        this.empty_carts.show();
+        this.not_selected_order.hide();
       } else {
         container.addClass("has-items");
+        this.empty_carts.hide();
+        this.not_selected_order.hide();
       }
     } else {
       container.removeClass("has-order");
       container.removeClass("has-items");
+      this.empty_carts.hide();
+      this.not_selected_order.show();
     }
 
-    this.#items.update_items(this.current_order && this.current_order.items || []);
+    this.#items.update_items(this.current_order && this.current_order.items || {});
   }
 }

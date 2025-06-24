@@ -6,6 +6,11 @@ class ProductItem {
   item_type = '';
 
   constructor(opts) {
+    console.log('=== PRODUCT ITEM CONSTRUCTOR ===');
+    console.log('Options received:', opts);
+    console.log('item_tree:', !!opts.item_tree);
+    console.log('order_manage:', !!opts.order_manage);
+    
     Object.assign(this, opts);
 
     this.parent_item_group = this.item_group;
@@ -64,6 +69,10 @@ class ProductItem {
   }
 
   render_items(items=this.items) {
+    console.log('=== RENDER ITEMS CALLED ===');
+    console.log('Number of items to render:', items ? Object.keys(items).length : 0);
+    console.log('Wrapper exists:', !!this.wrapper);
+    
     const self = this;
     items = Object.values(items);
 
@@ -79,7 +88,13 @@ class ProductItem {
 
     this.clusterize.update(raw_items);
 
+    console.log('Items in DOM before attaching events:', this.wrapper.find('.item-code').length);
 
+    // First remove any existing event handlers to prevent duplicates
+    this.wrapper.find('.item-code').off('click');
+    this.wrapper.find('.minus-btn, .add-btn, .add-item').off('click');
+    
+    let eventCount = 0;
     this.wrapper.find('.item-code').each(function () {
       const item_code = $(this).attr('item-code');
       const minus_btn = $(this).find('.minus-btn');
@@ -87,38 +102,122 @@ class ProductItem {
       const add_qty = $(this).find('.add-qty');
       const is_customizable = !!parseInt($(this).attr('is-customizable'));
       const add_item = $(this).find('.add-item');
+      
+      eventCount++;
 
       minus_btn.on('click', (e) => {
+        console.log('=== MINUS BUTTON CLICKED ===');
+        console.log('Item:', item_code);
         e.stopPropagation();
 
         const qty = parseInt(add_qty.html());
+        console.log('Current qty:', qty);
         qty > 1 && add_qty.html(qty - 1);
       });
 
       add_btn.on('click', (e) => {
+        console.log('=== PLUS BUTTON CLICKED ===');
+        console.log('Item:', item_code);
         e.stopPropagation();
 
-        add_qty.html(parseInt(add_qty.html()) + 1);
+        const currentQty = parseInt(add_qty.html());
+        console.log('Current qty:', currentQty);
+        add_qty.html(currentQty + 1);
       });
 
       add_item.on('click', (e) => {
+        console.log('=== ADD ITEM BUTTON CLICKED ===');
+        console.log('Item:', item_code);
+        console.log('Is customizable:', is_customizable);
+        console.log('Current order:', self.item_tree.order_manage.current_order);
+        
         e.stopPropagation();
         const qty = parseInt(add_qty.html());
+        console.log('Quantity to add:', qty);
 
         if (is_customizable) {
+          console.log('Opening customization modal...');
           self.show_customization_modal(item_code, qty);
           return;
         }
 
+        console.log('Adding item directly to order...');
         add_qty.html(1);
         self.add_item_in_order(self.get(item_code), qty);
       });
     });
+    
+    console.log('Event handlers attached to', eventCount, 'items');
 
     setTimeout(() => {
       const current_order = this.item_tree.order_manage.current_order;
+      console.log('Updating items with current order:', !!current_order);
       this.update_items(current_order ? current_order.items : {});
     }, 100);
+  }
+
+  reattach_events() {
+    console.log('=== REATTACHING EVENTS ===');
+    const self = this;
+    
+    // Remove old handlers first
+    this.wrapper.find('.item-code').off('click');
+    this.wrapper.find('.minus-btn, .add-btn, .add-item').off('click');
+    
+    let eventCount = 0;
+    this.wrapper.find('.item-code').each(function () {
+      const item_code = $(this).attr('item-code');
+      const minus_btn = $(this).find('.minus-btn');
+      const add_btn = $(this).find('.add-btn');
+      const add_qty = $(this).find('.add-qty');
+      const is_customizable = !!parseInt($(this).attr('is-customizable'));
+      const add_item = $(this).find('.add-item');
+      
+      eventCount++;
+
+      minus_btn.on('click', (e) => {
+        console.log('=== MINUS BUTTON CLICKED (reattached) ===');
+        console.log('Item:', item_code);
+        e.stopPropagation();
+
+        const qty = parseInt(add_qty.html());
+        console.log('Current qty:', qty);
+        qty > 1 && add_qty.html(qty - 1);
+      });
+
+      add_btn.on('click', (e) => {
+        console.log('=== PLUS BUTTON CLICKED (reattached) ===');
+        console.log('Item:', item_code);
+        e.stopPropagation();
+
+        const currentQty = parseInt(add_qty.html());
+        console.log('Current qty:', currentQty);
+        add_qty.html(currentQty + 1);
+      });
+
+      add_item.on('click', (e) => {
+        console.log('=== ADD ITEM BUTTON CLICKED (reattached) ===');
+        console.log('Item:', item_code);
+        console.log('Is customizable:', is_customizable);
+        console.log('Current order:', self.item_tree.order_manage.current_order);
+        
+        e.stopPropagation();
+        const qty = parseInt(add_qty.html());
+        console.log('Quantity to add:', qty);
+
+        if (is_customizable) {
+          console.log('Opening customization modal...');
+          self.show_customization_modal(item_code, qty);
+          return;
+        }
+
+        console.log('Adding item directly to order...');
+        add_qty.html(1);
+        self.add_item_in_order(self.get(item_code), qty);
+      });
+    });
+    
+    console.log('Events reattached to', eventCount, 'items');
   }
 
   update_items(items = []) {
@@ -144,15 +243,17 @@ class ProductItem {
       return new Promise(res => {
         frappe.db.get_list("Item Customizable", {
           parent_doctype: "Item",
-          fields: ["item", "rate", "qty", "included"],
-          filters: { parent: item_code }
+          fields: ["item", "rate", "qty", "included", "idx"],
+          filters: { parent: item_code },
+          order_by: "idx asc"  // Order by idx to maintain child table order
         }).then(customization_items => {
           const fields = customization_items.map(item => {
             return {
               customization_item: item.item,
               qty: item.qty,
               rate: item.rate,
-              included: item.included
+              included: item.included,
+              idx: item.idx
             }
           });
 
@@ -161,73 +262,270 @@ class ProductItem {
       });
     }
 
+    const customization_data = await customization_items();
+    
     const modal = new frappe.ui.Dialog({
-      title: `Customize ${item.item_name}`,
-      selectable: false,
+      title: `${__('Customize')} ${item.item_name}`,
       fields: [
         {
-          fieldname: 'customization',
-          fieldtype: 'Table',
-          label: 'Customization',
-          in_list_view: 1,
-          fields: [
-            {
-              fieldname: 'customization_item',
-              fieldtype: 'Link',
-              label: 'Item',
-              options: 'Item',
-              in_list_view: 1,
-              read_only: 1
-              /*get_query: () => {
-                  return {
-                      filters: {
-                          is_customizable: 1
-                      }
-                  }
-              }*/
-            },
-            {
-              fieldname: 'qty',
-              fieldtype: 'Float',
-              label: 'QTY',
-              in_list_view: 1,
-              read_only: 1
-            },
-            {
-              fieldname: 'rate',
-              fieldtype: 'Currency',
-              label: 'Rate',
-              in_list_view: 1,
-              read_only: 1
-            },
-            {
-              fieldname: "included",
-              fieldtype: "Check",
-              label: "Included",
-              in_list_view: 1
-            }
-          ],
-          data: await customization_items(),
-          in_place_edit: true,
-          cannot_add_rows: true,
+          fieldname: 'customization_html',
+          fieldtype: 'HTML'
         }
       ],
-      primary_action: (values) => {
-        const customization_items = values.customization.map(item => {
-          return {
-            item_code: item.customization_item,
-            qty: item.qty,
-            rate: item.rate,
-            included: item.included
-          }
+      primary_action_label: __('Add to Order'),
+      primary_action: () => {
+        const customization_items = [];
+        modal.$wrapper.find('.customization-item').each(function() {
+          const $item = $(this);
+          const included = $item.find('.custom-switch input').is(':checked');
+          customization_items.push({
+            item_code: $item.data('item-code'),
+            qty: parseFloat($item.data('qty')),
+            rate: parseFloat($item.data('rate')),
+            included: included ? 1 : 0
+          });
         });
+        
         item.is_customizable = 1;
         item.sub_items = JSON.stringify(customization_items);
+        console.log("Adding customized item:", item.item_name, "with options:", customization_items.filter(i => i.included).map(i => i.item_code));
         this.add_item_in_order(item, qty);
+        modal.hide();
+      },
+      secondary_action_label: __('Cancel'),
+      secondary_action: () => {
         modal.hide();
       }
     });
-    modal.wrapper.find('.grid-footer').hide();
+    
+    // Build custom HTML for grid layout
+    let html = `
+      <style>
+        .customization-container {
+          max-height: 450px;
+          overflow-y: auto;
+          padding: 10px;
+        }
+        .customization-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 12px;
+        }
+        .customization-item {
+          display: flex;
+          flex-direction: column;
+          padding: 15px;
+          border: 1px solid var(--border-color);
+          border-radius: 8px;
+          transition: all 0.2s;
+          background-color: var(--card-bg);
+          cursor: pointer;
+          position: relative;
+        }
+        .customization-item:hover {
+          border-color: var(--primary-color);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .customization-item.selected {
+          border-color: var(--primary-color);
+          background-color: var(--primary-light);
+        }
+        .customization-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+        }
+        .customization-name {
+          font-weight: 600;
+          font-size: 14px;
+          color: var(--text-color);
+          flex: 1;
+          margin-right: 10px;
+          line-height: 1.3;
+        }
+        .customization-details {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          font-size: 12px;
+          color: var(--text-muted);
+          margin-top: 8px;
+        }
+        .customization-qty {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .customization-rate {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-weight: 600;
+          color: var(--primary-color);
+          font-size: 14px;
+        }
+        .custom-switch {
+          position: relative;
+          display: inline-block;
+          width: 44px;
+          height: 24px;
+          flex-shrink: 0;
+        }
+        .custom-switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        .switch-slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #ccc;
+          transition: .3s;
+          border-radius: 24px;
+        }
+        .switch-slider:before {
+          position: absolute;
+          content: "";
+          height: 18px;
+          width: 18px;
+          left: 3px;
+          bottom: 3px;
+          background-color: white;
+          transition: .3s;
+          border-radius: 50%;
+        }
+        .custom-switch input:checked + .switch-slider {
+          background-color: var(--primary-color);
+        }
+        .custom-switch input:checked + .switch-slider:before {
+          transform: translateX(20px);
+        }
+        .no-customization {
+          text-align: center;
+          padding: 40px;
+          color: var(--text-muted);
+        }
+        .price-summary {
+          padding: 15px;
+          background-color: var(--bg-color);
+          border-top: 2px solid var(--border-color);
+          margin-top: 10px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .price-label {
+          font-weight: 500;
+          color: var(--text-color);
+        }
+        .total-price {
+          font-size: 18px;
+          font-weight: bold;
+          color: var(--primary-color);
+        }
+      </style>
+      <div class="customization-wrapper">
+        <div class="customization-container">
+          <div class="customization-grid">
+    `;
+    
+    if (customization_data && customization_data.length > 0) {
+      customization_data.forEach((custom_item, index) => {
+        const item_name = custom_item.customization_item || custom_item.item_code || '';
+        const qty = custom_item.qty || 1;
+        const rate = custom_item.rate || 0;
+        // Always start with switches unchecked regardless of database value
+        const default_checked = false; // Force all switches to be unchecked by default
+        
+        html += `
+          <div class="customization-item" 
+               data-item-code="${item_name}" 
+               data-qty="${qty}" 
+               data-rate="${rate}">
+            <div class="customization-header">
+              <div class="customization-name">${item_name}</div>
+              <label class="custom-switch">
+                <input type="checkbox" ${default_checked ? 'checked' : ''} id="switch-${index}">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="customization-details">
+              <div class="customization-qty">
+                <span class="fa fa-cubes"></span>
+                <span>${__('Qty')}: ${qty}</span>
+              </div>
+              <div class="customization-rate">
+                <span class="fa fa-money"></span>
+                <span>${RM.format_currency(rate)}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    } else {
+      html += `
+        <div class="no-customization">
+          <span class="fa fa-info-circle" style="font-size: 48px; margin-bottom: 10px; display: block;"></span>
+          <p>${__('No customization options available')}</p>
+        </div>
+      `;
+    }
+    
+    html += `
+          </div>
+        </div>
+        <div class="price-summary">
+          <span class="price-label">${__('Total Price')}:</span>
+          <span class="total-price" id="total-price">${RM.format_currency(item.price_list_rate)}</span>
+        </div>
+      </div>
+    `;
+    
+    // Set the HTML content
+    modal.fields_dict.customization_html.$wrapper.html(html);
+    
+    // Update price when switches change
+    const updateTotalPrice = () => {
+      let total = item.price_list_rate;
+      modal.$wrapper.find('.customization-item').each(function() {
+        const $item = $(this);
+        const included = $item.find('.custom-switch input').is(':checked');
+        if (included) {
+          const rate = parseFloat($item.data('rate'));
+          const qty = parseFloat($item.data('qty'));
+          total += rate * qty;
+        }
+      });
+      modal.$wrapper.find('#total-price').text(RM.format_currency(total));
+    };
+    
+    // Add event listeners to switches
+    modal.$wrapper.on('change', '.custom-switch input', function() {
+      const $item = $(this).closest('.customization-item');
+      if ($(this).is(':checked')) {
+        $item.addClass('selected');
+      } else {
+        $item.removeClass('selected');
+      }
+      updateTotalPrice();
+    });
+    
+    // Click on entire card to toggle
+    modal.$wrapper.on('click', '.customization-item', function(e) {
+      if (!$(e.target).closest('.custom-switch').length) {
+        const $switch = $(this).find('.custom-switch input');
+        $switch.prop('checked', !$switch.is(':checked')).trigger('change');
+      }
+    });
+    
+    // Initial price calculation - will show only base price since all switches are off
+    updateTotalPrice();
+    
     modal.show();
   }
 
@@ -346,13 +644,13 @@ class ProductItem {
       return `
         <div 
           class="small-box item item-code" 
-          item-code="${item_code}" is-customizable=${is_customizable} style="border-radius: 5px 20px 25px; width: 100%;">
+          item-code="${item_code}" is-customizable=${is_customizable} style="border-radius: 5px; width: 100%;">
             <div class="inner" style="position: inherit; z-index: 100">
                 <h4 class="title">
                     <i class="fa fa-circle" style="color: var(--${veg ? 'success' : 'danger'})"></i>
                     ${item_title}
                 </h4>
-                <p> ${description}</p>
+                <p style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; max-width: 200px;"> ${description}</p>
             </div>
             <div class="icon bg-transparent" style="border-radius: 20px;">
                 ${item_image ? `<img src="${item_image}" alt="${item_title}" loading="lazy" decoding="async"></img>` :
@@ -387,20 +685,49 @@ class ProductItem {
   }
 
   add_item_in_order(item, qty) {
+    console.log("=== ADD ITEM IN ORDER ===");
+    console.log("Item:", item.item_name);
+    console.log("Qty:", qty);
+    console.log("Is customizable:", item.is_customizable);
+    console.log("this.order_manage exists:", !!this.order_manage);
+    console.log("this.item_tree exists:", !!this.item_tree);
+    console.log("this.item_tree.order_manage exists:", !!(this.item_tree && this.item_tree.order_manage));
+    
     let rate = item.price_list_rate;
 
     if (item.is_customizable === 1) {
       const parse_sub_items = JSON.parse(item.sub_items);
-
-      rate = parse_sub_items.filter(sub_item => sub_item.included === 1).reduce((acc, sub_item) => {
+      console.log("Sub items:", parse_sub_items);
+      
+      // Start with base price and add selected customizations
+      rate = item.price_list_rate + parse_sub_items.filter(sub_item => sub_item.included === 1).reduce((acc, sub_item) => {
         return acc + (sub_item.rate * sub_item.qty);
       }, 0);
+      
+      console.log("Calculated rate:", rate);
+    }
+
+    // Try to get order_manage from multiple sources
+    const order_manage = this.order_manage || (this.item_tree && this.item_tree.order_manage);
+    console.log("order_manage found:", !!order_manage);
+    
+    const current_order = order_manage ? order_manage.current_order : null;
+    console.log("Current order:", current_order);
+
+    if (!current_order) {
+      console.error("NO CURRENT ORDER!");
+      frappe.msgprint(__("Please select or create an order first"));
+      return;
+    }
+
+    if (!RM.check_permissions("order", current_order, "write")) {
+      RM.notification("red", __("You cannot modify an order from another User"));
+      return;
     }
 
     const base_item = {
       name: null,
       entry_name: null,
-
       item_code: item.item_code,
       item_name: item.item_name,
       qty: qty,
@@ -416,45 +743,38 @@ class ProductItem {
       serial_no: null,
       has_batch_no: 0,
       batch_no: null,
-      //sub_items: sub_items,
+      company: RM.company,
+      customer: current_order.data.customer,
+      doctype: "Sales Invoice",
+      currency: RM.pos_profile.currency,
+      pos_profile: RM.pos_profile.name
     };
 
-    const current_order = this.order_manage.current_order;
-    const pos_profile = RM.pos_profile;
-
-    if (current_order != null) {
-      if (!RM.check_permissions("order", current_order, "write")) {
-        RM.notification("red", __("You cannot modify an order from another User"));
-        return;
+    console.log("Getting item details...");
+    
+    this.get_items_detail(base_item).then(item_data => {
+      console.log("Got item details:", item_data);
+      
+      const item_to_push = Object.assign({}, base_item, item_data);
+      item_to_push.identifier = RM.uuid("entry");
+      item_to_push.status = "Pending";
+      item_to_push.notes = null;
+      item_to_push.process_status_data = {
+        next_action_message: 'Sent',
+        color: 'red',
+        icon: 'fa fa-cart-arrow-down',
+        status_message: 'Add',
       }
+      item_to_push.qty = qty;
+      item_to_push.sub_items = item.sub_items;
+      item_to_push.is_customizable = item.is_customizable;
+      item_to_push.rate = rate;
+      item_to_push.price_list_rate = rate;
 
-      base_item.company = RM.company;
-      base_item.customer = current_order.data.customer;
-      base_item.doctype = "Sales Invoice";
-      base_item.currency = pos_profile.currency;
-      base_item.pos_profile = pos_profile.name;
-
-      this.get_items_detail(base_item).then(item_data => {
-        const item_to_push = Object.assign({}, base_item, item_data);
-
-        item_to_push.identifier = RM.uuid("entry");
-        item_to_push.status = "Pending";
-        item_to_push.notes = null;
-        item_to_push.process_status_data = {
-          next_action_message: 'Sent',
-          color: 'red',
-          icon: 'fa fa-cart-arrow-down',
-          status_message: 'Add',
-        }
-        item_to_push.qty = qty;
-        item_to_push.sub_items = item.sub_items;
-        item_to_push.is_customizable = item.is_customizable;
-        item_to_push.rate = rate;
-        item_to_push.price_list_rate = rate;
-
-        current_order.push_item(item_to_push);
-      });
-    }
+      console.log("Pushing item to order...");
+      current_order.push_item(item_to_push);
+      console.log("Item pushed!");
+    });
   }
 
   get_items_detail(item) {
@@ -474,27 +794,3 @@ class ProductItem {
     });
   }
 }
-
-/*let item = {
-    "item_code": "cafe",
-    "barcode": null,
-    "customer": "Ethan Acosta",
-    "currency": "HNL",
-    "update_stock": 1,
-    "conversion_rate": 1,
-    "price_list": "Standard Selling",
-    "price_list_currency": "HNL",
-    "plc_conversion_rate": 1,
-    "company": "Development",
-    "is_pos": 1,
-    "transaction_date": "2020-05-26",
-    "ignore_pricing_rule": 0,
-    "doctype": "Sales Invoice",
-    "name": "New Sales Invoice 1",
-    "qty": 1,
-    "stock_uom": "Nos",
-    "pos_profile": "POS Restaurant",
-    "cost_center": "Main - DEV",
-    "tax_category": "",
-    "child_docname": "New Sales Invoice Item 2"
-}*/
